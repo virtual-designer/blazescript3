@@ -1,0 +1,18 @@
+{
+    "printWidth": 80,
+    "trailingComma": "none",
+    "jsxBracketSameLine": false,
+    "arrowParens": "avoid",
+    "singleQuote": false,
+    "jsxSingleQuote": false,
+    "useTabs": false,
+    "overrides": [
+        {
+            "files": ["*.yml", "*.yaml"],
+            "options": {
+                "singleQuote": false,
+                "tabWidth": 2
+            }
+        }
+    ]
+}

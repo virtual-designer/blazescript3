@@ -1,0 +1,5 @@
+#!/usr/bin/env node
+
+import Compiler from "../lib/compiler/Compiler.ts";
+
+const compiler = new Compiler();
