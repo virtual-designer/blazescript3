@@ -13,6 +13,22 @@ class Tokenizer {
         "/": TokenType.Slash,
         ";": TokenType.Semicolon,
         "=": TokenType.Equal,
+        "!": TokenType.Not,
+        ">": TokenType.GreaterThan,
+        "<": TokenType.LessThan,
+        "(": TokenType.ParenthesisOpen,
+        ")": TokenType.ParenthesisClose,
+        "{": TokenType.BraceOpen,
+        "}": TokenType.BraceClose,
+        "[": TokenType.BracketOpen,
+        "]": TokenType.BracketClose
+    } as const;
+
+    public static readonly MULTI_CHAR_TOKENS = {
+        "==": TokenType.EqualEqual,
+        "!=": TokenType.NotEqual,
+        ">=": TokenType.GreaterThanEqual,
+        "<=": TokenType.LessThanEqual
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);
@@ -30,11 +46,10 @@ class Tokenizer {
 
     private isAlpha(char: string) {
         const code = char.charCodeAt(0);
+
         return (
-            code >= this.aCharCode &&
-            code <= this.zCharCode &&
-            code >= this.ACharCode &&
-            code <= this.ZCharCode
+            (code >= this.aCharCode && code <= this.zCharCode) ||
+            (code >= this.ACharCode && code <= this.ZCharCode)
         );
     }
 
@@ -42,9 +57,24 @@ class Tokenizer {
         return this.isDigit(char) || this.isAlpha(char);
     }
 
+    private isSpace(char: string) {
+        return (
+            char === " " ||
+            char === "\n" ||
+            char === "\r" ||
+            char === "\t" ||
+            char === "\v" ||
+            char === "\f" ||
+            char === "\a"
+        );
+    }
+
     private isHexDigit(char: string) {
         const code = char.toLowerCase().charCodeAt(0);
-        return this.isDigit(char) || code >= this.aCharCode && code <= this.fCharCode;
+        return (
+            this.isDigit(char) ||
+            (code >= this.aCharCode && code <= this.fCharCode)
+        );
     }
 
     public tokenize(filename: string, input: string) {
@@ -53,26 +83,16 @@ class Tokenizer {
             col = 1;
         const tokens: Token[] = [];
 
-        while (index < input.length) {
-            if (input[index]! in Tokenizer.SINGLE_CHAR_TOKENS) {
-                tokens.push(
-                    new Token(
-                        Tokenizer.SINGLE_CHAR_TOKENS[
-                            input[
-                                index
-                            ]! as keyof typeof Tokenizer.SINGLE_CHAR_TOKENS
-                        ],
-                        input[index]!,
-                        {
-                            start: [line, col],
-                            end: [line, col + 1],
-                            filename
-                        }
-                    )
-                );
+        mainLoop: while (index < input.length) {
+            if (this.isSpace(input[index]!)) {
+                if (input[index]! === "\n" || input[index]! === "\r") {
+                    col = 1;
+                    line++;
+                } else {
+                    col++;
+                }
 
                 index++;
-                col++;
                 continue;
             }
 
@@ -187,15 +207,95 @@ class Tokenizer {
                 continue;
             }
 
-            throw new TokenizerError(
-                `Unexpected token: ${input[index]}`,
-                {
-                    start: [line, col],
-                    end: [line, col + 1],
-                    filename
+            if (this.isAlpha(input[index]!) || input[index] === "_") {
+                const start = [line, col] as const;
+                let str = "";
+
+                while (
+                    index < input.length &&
+                    (this.isAlnum(input[index]!) || input[index] === "_")
+                ) {
+                    str += input[index];
+                    col++;
+                    index++;
                 }
-            );
+
+                tokens.push(
+                    new Token(TokenType.Identifier, str, {
+                        start,
+                        end: [line, col],
+                        filename
+                    })
+                );
+
+                continue;
+            }
+
+            for (const tokenValue in Tokenizer.MULTI_CHAR_TOKENS) {
+                const start = [line, col] as const;
+
+                if (
+                    input.slice(index, index + tokenValue.length) !== tokenValue
+                ) {
+                    continue;
+                }
+
+                col += tokenValue.length;
+                index += tokenValue.length;
+
+                tokens.push(
+                    new Token(
+                        Tokenizer.MULTI_CHAR_TOKENS[
+                            tokenValue as keyof typeof Tokenizer.MULTI_CHAR_TOKENS
+                        ],
+                        tokenValue,
+                        {
+                            start,
+                            end: [line, col],
+                            filename
+                        }
+                    )
+                );
+
+                continue mainLoop;
+            }
+
+            if (input[index]! in Tokenizer.SINGLE_CHAR_TOKENS) {
+                tokens.push(
+                    new Token(
+                        Tokenizer.SINGLE_CHAR_TOKENS[
+                            input[
+                                index
+                            ]! as keyof typeof Tokenizer.SINGLE_CHAR_TOKENS
+                        ],
+                        input[index]!,
+                        {
+                            start: [line, col],
+                            end: [line, col + 1],
+                            filename
+                        }
+                    )
+                );
+
+                index++;
+                col++;
+                continue;
+            }
+
+            throw new TokenizerError(`Unexpected token: ${input[index]}`, {
+                start: [line, col],
+                end: [line, col + 1],
+                filename
+            });
         }
+
+        tokens.push(
+            new Token(TokenType.EOF, "[EOF]", {
+                start: [line, col],
+                end: [line, col + 1],
+                filename
+            })
+        );
 
         return tokens;
     }

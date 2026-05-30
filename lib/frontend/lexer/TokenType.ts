@@ -3,6 +3,8 @@ enum TokenType {
     IntegerLiteral,
     FloatLiteral,
     StringLiteral,
+    BooleanLiteral,
+    NullLiteral,
     Identifier,
     Dot,
     Comma,
@@ -14,6 +16,18 @@ enum TokenType {
     Modulus,
     Equal,
     EqualEqual,
+    NotEqual,
+    GreaterThan,
+    LessThan,
+    GreaterThanEqual,
+    LessThanEqual,
+    Not,
+    ParenthesisOpen,
+    ParenthesisClose,
+    BraceOpen,
+    BraceClose,
+    BracketOpen,
+    BracketClose,
 }
 
 export default TokenType;

@@ -1,5 +1,11 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import Compiler from "../lib/compiler/Compiler.ts";
+import CompilerTransactionBuilder from "../lib/compiler/CompilerTransactionBuilder.ts";
 
 const compiler = new Compiler();
+const tx = new CompilerTransactionBuilder()
+    .setFile("tmp/main.bl")
+    .build();
+
+await compiler.accept(tx);

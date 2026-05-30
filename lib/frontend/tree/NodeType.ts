@@ -1,6 +1,8 @@
 enum NodeType {
     Root,
-    Literal
+    Literal,
+    UnaryExpression,
+    BinaryExpression,
 }
 
 export default NodeType;
