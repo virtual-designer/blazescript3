@@ -12,7 +12,9 @@ class Compiler {
         const tokens = this.tokenizer.tokenize(tx.filename, source);
         const rootNode = this.parser.parse(tokens);
         console.log("Compilation finished:");
-        console.log(rootNode);
+        console.dir(rootNode, {
+            depth: Infinity
+        });
     }
 }
 

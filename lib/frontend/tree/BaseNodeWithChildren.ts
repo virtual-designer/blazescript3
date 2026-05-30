@@ -9,6 +9,10 @@ abstract class BaseNodeWithChildren extends BaseNode {
         this.children = children;
     }
 
+    public override branches(): BaseNode[] {
+        return [...super.branches(), ...this.children];
+    }
+
     public appendChild(child: BaseNode): this {
         this.children.push(child);
         return this;

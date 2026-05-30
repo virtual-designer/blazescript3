@@ -17,6 +17,10 @@ class UnaryExpressionNode extends ExpressionNode {
         this.operator = operator;
         this.operand = operand;
     }
+    
+    public override branches() {
+        return [...super.branches(), this.operand];
+    }
 }
 
 export default UnaryExpressionNode;
