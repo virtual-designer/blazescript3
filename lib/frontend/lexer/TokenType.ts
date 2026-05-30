@@ -1,5 +1,5 @@
 enum TokenType {
-    EOF,
+    EOF = 1,
     IntegerLiteral,
     FloatLiteral,
     StringLiteral,

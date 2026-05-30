@@ -8,6 +8,8 @@ import LiteralNode from "../tree/LiteralNode.ts";
 import LiteralNodeKind from "../tree/LiteralNodeKind.ts";
 import type { Location } from "../tree/Location.ts";
 import RootNode from "../tree/RootNode.ts";
+import UnaryExpressionNode from "../tree/UnaryExpressionNode.ts";
+import UnaryOperator from "../tree/UnaryOperator.ts";
 import ParserError from "./ParserError.ts";
 
 type ParserContext = {
@@ -27,10 +29,16 @@ class Parser {
         [TokenType.LessThan]: BinaryOperator.LessThan,
         [TokenType.LessThanEqual]: BinaryOperator.LessThanOrEqual,
         [TokenType.GreaterThan]: BinaryOperator.GreaterThan,
-        [TokenType.GreaterThanEqual]: BinaryOperator.GreaterThanOrEqual,
+        [TokenType.GreaterThanEqual]: BinaryOperator.GreaterThanOrEqual
     } as const;
 
-    protected combineLocations(...nodes: BaseNode[]): Location {
+    protected readonly unaryOperatorMap = {
+        [TokenType.Not]: UnaryOperator.Not,
+        [TokenType.Plus]: UnaryOperator.Plus,
+        [TokenType.Minus]: UnaryOperator.Minus
+    } as const;
+
+    protected combineLocations(...nodes: (BaseNode | Token)[]): Location {
         let start = [
             Number.POSITIVE_INFINITY,
             Number.POSITIVE_INFINITY
@@ -164,10 +172,45 @@ class Parser {
         }
     }
 
+    protected parseUnaryExpression(context: ParserContext): ExpressionNode {
+        const operators: Token[] = [];
+
+        while (
+            context.peek() &&
+            context.peek()!.type in this.unaryOperatorMap
+        ) {
+            operators.push(context.consume()!);
+        }
+
+        if (operators.length) {
+            const operand = this.parsePrimaryExpression(context);
+            let node = operand;
+
+            while (operators.length) {
+                const token = operators.pop()!;
+
+                const operator =
+                    this.unaryOperatorMap[
+                        token.type as keyof typeof this.unaryOperatorMap
+                    ];
+
+                node = new UnaryExpressionNode(
+                    operator,
+                    node,
+                    this.combineLocations(token, operand)
+                );
+            }
+
+            return node;
+        }
+
+        return this.parsePrimaryExpression(context);
+    }
+
     protected parseMultiplicativeExpression(
         context: ParserContext
     ): ExpressionNode {
-        let left: ExpressionNode = this.parsePrimaryExpression(context);
+        let left: ExpressionNode = this.parseUnaryExpression(context);
 
         while (
             !context.isEOF() &&
@@ -183,7 +226,7 @@ class Parser {
                       : BinaryOperator.Modulus;
 
             context.consume();
-            const right = this.parsePrimaryExpression(context);
+            const right = this.parseUnaryExpression(context);
 
             left = new BinaryExpressionNode(
                 operator,
@@ -223,15 +266,21 @@ class Parser {
         return left;
     }
 
-    protected parseComparisonExpression(context: ParserContext): ExpressionNode {
+    protected parseComparisonExpression(
+        context: ParserContext
+    ): ExpressionNode {
         let left: ExpressionNode = this.parseAdditiveExpression(context);
 
         while (
             !context.isEOF() &&
-            (context.peek()?.type) && context.peek()!.type in this.comparisonOperatorMap
+            context.peek()?.type &&
+            context.peek()!.type in this.comparisonOperatorMap
         ) {
             const operator =
-                this.comparisonOperatorMap[context.peek()!.type as keyof typeof this.comparisonOperatorMap]
+                this.comparisonOperatorMap[
+                    context.peek()!
+                        .type as keyof typeof this.comparisonOperatorMap
+                ];
 
             context.consume();
             const right = this.parseAdditiveExpression(context);
