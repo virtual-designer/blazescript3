@@ -1,11 +1,43 @@
 #!/usr/bin/env bun
 
+import { parseArgs } from "node:util";
 import Compiler from "../lib/compiler/Compiler.ts";
 import CompilerTransactionBuilder from "../lib/compiler/CompilerTransactionBuilder.ts";
+import { exit } from "node:process";
+import path from "node:path";
+
+const argv0 = path.basename(process.argv[1]);
+
+function usage() {
+    console.log("Usage:");
+    console.log("  %s [OPTION]... [FILE]...", argv0);
+}
+
+const { positionals, values } = parseArgs({
+    args: process.argv.slice(2),
+    allowPositionals: true,
+    strict: true,
+    options: {
+        help: {
+            type: "boolean",
+            short: "h"
+        },
+        output: {
+            type: "string",
+            short: "o"
+        }
+    }
+});
+
+if (values.help) {
+    usage();
+    exit(0);
+}
 
 const compiler = new Compiler();
 const tx = new CompilerTransactionBuilder()
-    .setFile("tmp/main.bl")
+    .addInputFiles(...positionals)
+    .setOutputFile(values.output ?? "out.js")
     .build();
 
 await compiler.accept(tx);

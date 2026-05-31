@@ -1,41 +1,54 @@
-import path from "path";
-import type { CompilerTransaction } from "./CompilerTransaction.ts";
+import type {
+    CompilerTransaction,
+    InputSource
+} from "./CompilerTransaction.ts";
 
 class CompilerTransactionBuilder {
-    private filepath?: string;
-    private input?: string;
-    private filename?: string;
+    private inputFiles?: string[];
+    private inputSources?: InputSource[];
+    private outputFile?: string;
 
-    public setFile(path: string) {
-        this.filepath = path;
-        this.input = undefined;
+    public addInputFile(file: string) {
+        this.inputFiles ??= [];
+        this.inputFiles?.push(file);
         return this;
     }
 
-    public setFileName(filename: string) {
-        this.filename = filename;
+    public addInputFiles(...files: string[]) {
+        this.inputFiles ??= [];
+        this.inputFiles?.push(...files);
         return this;
     }
 
-    public setInput(data: string | Buffer<ArrayBufferLike>) {
-        this.input = data.toString('utf8');
-        this.filepath = undefined;
+    public addInputSource(
+        filename: string,
+        data: string | Buffer<ArrayBufferLike>
+    ) {
+        this.inputSources ??= [];
+        this.inputSources?.push({ filename, data });
+        return this;
+    }
+    
+    public addInputSources(sources: InputSource[]) {
+        this.inputSources ??= [];
+        this.inputSources?.push(...sources);
+        return this;
+    }
+
+    public setOutputFile(file: string) {
+        this.outputFile = file;
         return this;
     }
 
     public build(): CompilerTransaction {
-        if (!((!this.filepath && this.input) || (!this.input && this.filepath))) {
-            throw new Error("Invalid transaction data");
-        }
-
-        if (!this.filepath && !this.filename) {
-            throw new Error("No file name provided");
+        if (!this.inputFiles?.length && !this.inputSources?.length) {
+            throw new Error("No input provided");
         }
 
         return {
-            filepath: this.filepath,
-            filename: this.filename ?? path.basename(this.filepath!),
-            input: this.input
+            inputFiles: this.inputFiles,
+            inputSources: this.inputSources,
+            outputFile: this.outputFile
         };
     }
 }

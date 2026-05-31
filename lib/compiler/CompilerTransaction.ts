@@ -1,5 +1,10 @@
 export type CompilerTransaction = {
-    filepath?: string;
-    input?: string;
+    inputFiles?: string[];
+    inputSources?: InputSource[];
+    outputFile?: string;
+};
+
+export type InputSource = {
     filename: string;
+    data: string | Buffer<ArrayBufferLike>;
 };
