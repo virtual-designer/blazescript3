@@ -12,6 +12,7 @@ class Tokenizer {
         "*": TokenType.Times,
         "/": TokenType.Slash,
         ";": TokenType.Semicolon,
+        ":": TokenType.Colon,
         "=": TokenType.Equal,
         "!": TokenType.Not,
         ">": TokenType.GreaterThan,
@@ -21,7 +22,9 @@ class Tokenizer {
         "{": TokenType.BraceOpen,
         "}": TokenType.BraceClose,
         "[": TokenType.BracketOpen,
-        "]": TokenType.BracketClose
+        "]": TokenType.BracketClose,
+        "|": TokenType.Pipe,
+        "&": TokenType.Ampersand,
     } as const;
 
     public static readonly MULTI_CHAR_TOKENS = {
@@ -29,6 +32,13 @@ class Tokenizer {
         "!=": TokenType.NotEqual,
         ">=": TokenType.GreaterThanEqual,
         "<=": TokenType.LessThanEqual
+    } as const;
+
+    public static readonly KEYWORDS = {
+        let: TokenType.Let,
+        const: TokenType.Const,
+        final: TokenType.Final,
+        match: TokenType.Match
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);
@@ -64,8 +74,7 @@ class Tokenizer {
             char === "\r" ||
             char === "\t" ||
             char === "\v" ||
-            char === "\f" ||
-            char === "\a"
+            char === "\f"
         );
     }
 
@@ -220,13 +229,29 @@ class Tokenizer {
                     index++;
                 }
 
-                tokens.push(
-                    new Token(TokenType.Identifier, str, {
-                        start,
-                        end: [line, col],
-                        filename
-                    })
-                );
+                if (str in Tokenizer.KEYWORDS) {
+                    tokens.push(
+                        new Token(
+                            Tokenizer.KEYWORDS[
+                                str as keyof typeof Tokenizer.KEYWORDS
+                            ],
+                            str,
+                            {
+                                start,
+                                end: [line, col],
+                                filename
+                            }
+                        )
+                    );
+                } else {
+                    tokens.push(
+                        new Token(TokenType.Identifier, str, {
+                            start,
+                            end: [line, col],
+                            filename
+                        })
+                    );
+                }
 
                 continue;
             }

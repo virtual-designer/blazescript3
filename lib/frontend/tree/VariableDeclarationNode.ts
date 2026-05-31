@@ -1,0 +1,39 @@
+import BaseNode from "./BaseNode.ts";
+import type ExpressionNode from "./ExpressionNode.ts";
+import type IdentifierNode from "./IdentifierNode.ts";
+import type { Location } from "./Location.ts";
+import NodeType from "./NodeType.ts";
+import type VariableDeclarationKind from "./VariableDeclarationKind.ts";
+
+class VariableDeclarationNode extends BaseNode {
+    public override readonly type = NodeType.VariableDeclaration;
+    public readonly kind: VariableDeclarationKind;
+    public readonly identifier: IdentifierNode;
+    public readonly annotatedType?: ExpressionNode;
+    public readonly value?: ExpressionNode;
+
+    public constructor(
+        kind: VariableDeclarationKind,
+        identifier: IdentifierNode,
+        annotatedType: ExpressionNode | undefined,
+        value: ExpressionNode | undefined,
+        location: Location
+    ) {
+        super(location);
+        this.kind = kind;
+        this.identifier = identifier;
+        this.annotatedType = annotatedType;
+        this.value = value;
+    }
+
+    public override branches(): BaseNode[] {
+        return [
+            ...super.branches(),
+            this.identifier,
+            this.annotatedType,
+            this.value
+        ].filter(x => !!x);
+    }
+}
+
+export default VariableDeclarationNode;

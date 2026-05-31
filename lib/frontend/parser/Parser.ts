@@ -4,12 +4,15 @@ import type BaseNode from "../tree/BaseNode.ts";
 import BinaryExpressionNode from "../tree/BinaryExpressionNode.ts";
 import BinaryOperator from "../tree/BinaryOperator.ts";
 import type ExpressionNode from "../tree/ExpressionNode.ts";
+import IdentifierNode from "../tree/IdentifierNode.ts";
 import LiteralNode from "../tree/LiteralNode.ts";
 import LiteralNodeKind from "../tree/LiteralNodeKind.ts";
 import type { Location } from "../tree/Location.ts";
 import RootNode from "../tree/RootNode.ts";
 import UnaryExpressionNode from "../tree/UnaryExpressionNode.ts";
 import UnaryOperator from "../tree/UnaryOperator.ts";
+import VariableDeclarationKind from "../tree/VariableDeclarationKind.ts";
+import VariableDeclarationNode from "../tree/VariableDeclarationNode.ts";
 import ParserError from "./ParserError.ts";
 
 type ParserContext = {
@@ -36,6 +39,11 @@ class Parser {
         [TokenType.Not]: UnaryOperator.Not,
         [TokenType.Plus]: UnaryOperator.Plus,
         [TokenType.Minus]: UnaryOperator.Minus
+    } as const;
+
+    protected readonly typeOperatorMap = {
+        [TokenType.Pipe]: BinaryOperator.Union,
+        [TokenType.Ampersand]: BinaryOperator.Intersection
     } as const;
 
     protected combineLocations(...nodes: (BaseNode | Token)[]): Location {
@@ -140,9 +148,21 @@ class Parser {
         return this.parseSimpleExpression(context);
     }
 
+    protected parseIdentifier(context: ParserContext): IdentifierNode {
+        const token = context.expect([TokenType.Identifier]);
+        return new IdentifierNode(token.value, token.location);
+    }
+
     protected parseSimpleExpression(context: ParserContext): ExpressionNode {
-        const token = context.expect();
-        const type = token.type;
+        const token = context.peek();
+        const type = token?.type;
+
+        if (!type || !token) {
+            throw new ParserError(
+                `Unexpected end of file`,
+                context.tokens.at(-1)!.location
+            );
+        }
 
         switch (type) {
             case TokenType.IntegerLiteral:
@@ -150,6 +170,7 @@ class Parser {
             case TokenType.StringLiteral:
             case TokenType.BooleanLiteral:
             case TokenType.NullLiteral:
+                context.consume();
                 return new LiteralNode(
                     type === TokenType.IntegerLiteral
                         ? LiteralNodeKind.Integer
@@ -163,6 +184,9 @@ class Parser {
                     token.value,
                     token.location
                 );
+
+            case TokenType.Identifier:
+                return this.parseIdentifier(context);
 
             default:
                 throw new ParserError(
@@ -300,8 +324,106 @@ class Parser {
         return this.parseComparisonExpression(context);
     }
 
+    protected parseTypeSimpleExpression(
+        context: ParserContext
+    ): ExpressionNode {
+        return this.parseIdentifier(context);
+    }
+
+    protected parseTypePrimaryExpression(
+        context: ParserContext
+    ): ExpressionNode {
+        if (context.peek()?.type === TokenType.ParenthesisOpen) {
+            context.consume();
+            const expression = this.parseTypeExpression(context);
+            context.expect([TokenType.ParenthesisClose]);
+            return expression;
+        }
+
+        return this.parseSimpleExpression(context);
+    }
+
+    protected parseTypeBinaryExpression(context: ParserContext) {
+        let left: ExpressionNode = this.parseTypePrimaryExpression(context);
+
+        while (
+            !context.isEOF() &&
+            context.peek()?.type &&
+            context.peek()!.type in this.typeOperatorMap
+        ) {
+            const operator =
+                this.typeOperatorMap[
+                    context.peek()!.type as keyof typeof this.typeOperatorMap
+                ];
+
+            context.consume();
+            const right = this.parseTypePrimaryExpression(context);
+
+            left = new BinaryExpressionNode(
+                operator,
+                left,
+                right,
+                this.combineLocations(left, right)
+            );
+        }
+
+        return left;
+    }
+
+    protected parseTypeExpression(context: ParserContext): ExpressionNode {
+        return this.parseTypeBinaryExpression(context);
+    }
+
+    protected parseVariableDeclaration(context: ParserContext): BaseNode {
+        const keywordToken = context.expect([
+            TokenType.Let,
+            TokenType.Const,
+            TokenType.Final
+        ]);
+        const identifier = this.parseIdentifier(context);
+        let annotatedType: ExpressionNode | undefined;
+        let value: ExpressionNode | undefined;
+
+        if (context.peek()?.type === TokenType.Colon) {
+            context.consume();
+            annotatedType = this.parseTypeExpression(context);
+        }
+
+        if (context.peek()?.type === TokenType.Equal) {
+            context.consume();
+            value = this.parseExpression(context);
+        }
+
+        return new VariableDeclarationNode(
+            keywordToken.type === TokenType.Let
+                ? VariableDeclarationKind.Let
+                : keywordToken.type === TokenType.Final
+                  ? VariableDeclarationKind.Final
+                  : VariableDeclarationKind.Const,
+            identifier,
+            annotatedType,
+            value,
+            this.combineLocations(
+                keywordToken,
+                value ?? annotatedType ?? identifier
+            )
+        );
+    }
+
     protected parseStatement(context: ParserContext): BaseNode {
-        const expr = this.parseExpression(context);
+        let node: BaseNode;
+
+        switch (context.peek()?.type) {
+            case TokenType.Let:
+            case TokenType.Const:
+            case TokenType.Final:
+                node = this.parseVariableDeclaration(context);
+                break;
+
+            default:
+                node = this.parseExpression(context);
+                break;
+        }
 
         while (
             !context.isEOF() &&
@@ -310,7 +432,7 @@ class Parser {
             context.consume();
         }
 
-        return expr;
+        return node;
     }
 }
 

@@ -10,6 +10,8 @@ enum BinaryOperator {
     LessThanOrEqual = '<=',
     GreaterThan = '>',
     GreaterThanOrEqual = '>=',
+    Union = '|',
+    Intersection = '&'
 }
 
 export default BinaryOperator;

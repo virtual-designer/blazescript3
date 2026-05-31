@@ -8,6 +8,7 @@ enum TokenType {
     Identifier,
     Dot,
     Comma,
+    Colon,
     Semicolon,
     Plus,
     Minus,
@@ -28,6 +29,12 @@ enum TokenType {
     BraceClose,
     BracketOpen,
     BracketClose,
+    Let,
+    Final,
+    Const,
+    Match,
+    Pipe,
+    Ampersand
 }
 
 export default TokenType;
