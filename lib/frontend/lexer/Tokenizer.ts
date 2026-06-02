@@ -24,7 +24,7 @@ class Tokenizer {
         "[": TokenType.BracketOpen,
         "]": TokenType.BracketClose,
         "|": TokenType.Pipe,
-        "&": TokenType.Ampersand,
+        "&": TokenType.Ampersand
     } as const;
 
     public static readonly MULTI_CHAR_TOKENS = {
@@ -38,10 +38,15 @@ class Tokenizer {
         let: TokenType.Let,
         const: TokenType.Const,
         final: TokenType.Final,
-        match: TokenType.Match
+        match: TokenType.Match,
+        true: TokenType.BooleanLiteral,
+        false: TokenType.BooleanLiteral,
+        null: TokenType.NullLiteral
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);
+    private readonly oneCharCode = "1".charCodeAt(0);
+    private readonly sevenCharCode = "7".charCodeAt(0);
     private readonly nineCharCode = "9".charCodeAt(0);
     private readonly aCharCode = "a".charCodeAt(0);
     private readonly fCharCode = "f".charCodeAt(0);
@@ -78,12 +83,37 @@ class Tokenizer {
         );
     }
 
+    private isBinDigit(char: string) {
+        const code = char.toLowerCase().charCodeAt(0);
+        return code >= this.zeroCharCode && code <= this.oneCharCode;
+    }
+
+    private isOctalDigit(char: string) {
+        const code = char.toLowerCase().charCodeAt(0);
+        return code >= this.zeroCharCode && code <= this.sevenCharCode;
+    }
+
     private isHexDigit(char: string) {
         const code = char.toLowerCase().charCodeAt(0);
         return (
             this.isDigit(char) ||
             (code >= this.aCharCode && code <= this.fCharCode)
         );
+    }
+
+    private isDigitRadix(char: string, radix = 10) {
+        switch (radix) {
+            case 2:
+                return this.isBinDigit(char);
+            case 8:
+                return this.isOctalDigit(char);
+            case 10:
+                return this.isDigit(char);
+            case 16:
+                return this.isHexDigit(char);
+            default:
+                throw new Error(`Unsupported radix: ${radix}`);
+        }
     }
 
     public tokenize(filename: string, input: string) {
@@ -130,14 +160,14 @@ class Tokenizer {
 
                 while (
                     index < input.length &&
-                    (this.isHexDigit(input[index]!) ||
+                    (this.isDigitRadix(input[index]!, radix) ||
                         input[index] === "." ||
                         input[index] === "_")
                 ) {
                     if (input[index] === ".") {
-                        if (isFloat) {
+                        if (isFloat || radix !== 10) {
                             throw new TokenizerError(
-                                `Unexpected dot after numeric literal: ${str}`,
+                                `Unexpected radix point after numeric literal: ${str}`,
                                 {
                                     start,
                                     end: [line, col + 1],
@@ -175,7 +205,7 @@ class Tokenizer {
 
                 if (!str) {
                     throw new TokenizerError(
-                        `Unexpected end of literal: ${str}`,
+                        `Invalid or unexpected end of numeric literal`,
                         {
                             start,
                             end: [line, col],
@@ -204,7 +234,7 @@ class Tokenizer {
                         isFloat
                             ? TokenType.FloatLiteral
                             : TokenType.IntegerLiteral,
-                        `${num.toString(radix)}`,
+                        `${num.toString(10)}`,
                         {
                             start,
                             end: [line, col],
@@ -252,6 +282,210 @@ class Tokenizer {
                         })
                     );
                 }
+
+                continue;
+            }
+
+            if (input[index] === '"' || input[index] === "'") {
+                const start = [line, col] as const;
+                const quote = input[index]!;
+                let str = "";
+                index++;
+                col++;
+
+                while (index < input.length && input[index] !== quote) {
+                    if (input[index] === "\\") {
+                        index++;
+                        col++;
+
+                        if (index >= input.length) {
+                            throw new TokenizerError(
+                                "Unterminated string literal: Reached EOF",
+                                {
+                                    start,
+                                    end: [line, col],
+                                    filename
+                                }
+                            );
+                        }
+
+                        switch (input[index]) {
+                            case '"':
+                                str += '"';
+                                break;
+
+                            case "'":
+                                str += "'";
+                                break;
+
+                            case "n":
+                                str += "\n";
+                                break;
+
+                            case "t":
+                                str += "\t";
+                                break;
+
+                            case "f":
+                                str += "\f";
+                                break;
+
+                            case "v":
+                                str += "\v";
+                                break;
+
+                            case "a":
+                                str += "\a";
+                                break;
+
+                            case "r":
+                                str += "\r";
+                                break;
+
+                            case "c":
+                                str += "\c";
+                                break;
+
+                            case "b":
+                                str += "\b";
+                                break;
+
+                            case "\\":
+                                str += "\\";
+                                break;
+
+                            default: {
+                                if (
+                                    input[index] === "u" ||
+                                    input[index] === "x" ||
+                                    input[index] === "o" ||
+                                    input[index] === "b" ||
+                                    this.isDigit(input[index]!)
+                                ) {
+                                    const radix =
+                                        input[index] === "u"
+                                            ? 16
+                                            : input[index] === "x"
+                                              ? 16
+                                              : input[index] === "b"
+                                                ? 2
+                                                : 8;
+
+                                    const char = input[index];
+                                    let unicodeVariableLength = false;
+
+                                    if (!this.isDigit(input[index]!)) {
+                                        index++;
+                                        col++;
+                                    }
+
+                                    if (char === "u" && input[index] === "{") {
+                                        unicodeVariableLength = true;
+                                        index++;
+                                        col++;
+                                    }
+
+                                    const limit = unicodeVariableLength
+                                        ? Infinity
+                                        : radix === 16
+                                          ? 4
+                                          : radix === 8
+                                            ? 3
+                                            : Infinity;
+
+                                    let digits = "";
+
+                                    while (
+                                        index < input.length &&
+                                        digits.length < limit &&
+                                        this.isDigitRadix(input[index]!, radix)
+                                    ) {
+                                        digits += input[index];
+                                        index++;
+                                        col++;
+                                    }
+
+                                    if (char === "u" && unicodeVariableLength) {
+                                        if (input[index] !== "}") {
+                                            throw new TokenizerError(
+                                                "Unterminated unicode escape character",
+                                                {
+                                                    start,
+                                                    end: [line, col],
+                                                    filename
+                                                }
+                                            );
+                                        }
+
+                                        index++;
+                                        col++;
+                                    }
+
+                                    const value = Number.parseInt(
+                                        digits,
+                                        radix
+                                    );
+
+                                    str += String.fromCharCode(value);
+                                    continue;
+                                }
+
+                                throw new TokenizerError(
+                                    "Unrecognized escape character: \\" +
+                                        input[index],
+                                    {
+                                        start,
+                                        end: [line, col],
+                                        filename
+                                    }
+                                );
+                            }
+                        }
+
+                        index++;
+                        col++;
+                        continue;
+                    }
+
+                    str += input[index];
+
+                    if (this.isSpace(input[index]!)) {
+                        if (input[index]! === "\n" || input[index]! === "\r") {
+                            col = 1;
+                            line++;
+                        } else {
+                            col++;
+                        }
+
+                        index++;
+                        continue;
+                    }
+
+                    index++;
+                    col++;
+                }
+
+                if (index >= input.length || input[index] !== quote) {
+                    throw new TokenizerError(
+                        "Unterminated string literal: Reached EOF",
+                        {
+                            start,
+                            end: [line, col],
+                            filename
+                        }
+                    );
+                }
+
+                index++;
+                col++;
+
+                tokens.push(
+                    new Token(TokenType.StringLiteral, str, {
+                        start,
+                        end: [line, col],
+                        filename
+                    })
+                );
 
                 continue;
             }
