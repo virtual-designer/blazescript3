@@ -38,7 +38,12 @@ describe("Tokenizer", () => {
                 start: [1, 6],
                 end: [1, 7],
                 filename: "test.bl"
-            })
+            }),
+            new Token(TokenType.EOF, "[EOF]", {
+                start: [1, 7],
+                end: [1, 8],
+                filename: "test.bl"
+            }),
         ]);
     });
 
@@ -71,9 +76,14 @@ describe("Tokenizer", () => {
                 end: [1, 21],
                 filename: "test.bl"
             }),
-            new Token(TokenType.IntegerLiteral, "fea0", {
+            new Token(TokenType.IntegerLiteral, 0xfea0.toString(10), {
                 start: [1, 21],
                 end: [1, 27],
+                filename: "test.bl"
+            }),
+            new Token(TokenType.EOF, "[EOF]", {
+                start: [1, 27],
+                end: [1, 28],
                 filename: "test.bl"
             }),
         ]);
@@ -106,6 +116,11 @@ describe("Tokenizer", () => {
             new Token(TokenType.Identifier, "_fancy", {
                 start: [1, 19],
                 end: [1, 25],
+                filename: "test.bl"
+            }),
+            new Token(TokenType.EOF, "[EOF]", {
+                start: [1, 25],
+                end: [1, 26],
                 filename: "test.bl"
             }),
         ]);
@@ -148,6 +163,11 @@ describe("Tokenizer", () => {
             new Token(TokenType.IntegerLiteral, "2", {
                 start: [1, 13],
                 end: [1, 14],
+                filename: "test.bl"
+            }),
+            new Token(TokenType.EOF, "[EOF]", {
+                start: [1, 14],
+                end: [1, 15],
                 filename: "test.bl"
             }),
         ]);
