@@ -4,7 +4,7 @@ import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
 
 class CallExpressionNode extends ExpressionNode {
-    public override readonly type = NodeType.Call;
+    public override readonly type = NodeType.CallExpression;
     public readonly callee: ExpressionNode;
     public readonly args: ExpressionNode[];
 

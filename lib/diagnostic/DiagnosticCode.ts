@@ -1,4 +1,7 @@
 export enum DiagnosticCode {
     Success,
     SyntaxError,
+    IllegalRedefinition,
+    InitializationRequired,
+    Unused,
 }

@@ -9,16 +9,18 @@ import { isLocatableError } from "../diagnostic/LoctableError.ts";
 import DiagnosticPrinter from "../diagnostic/DiagnosticPrinter.ts";
 import { DiagnosticCode } from "../diagnostic/DiagnosticCode.ts";
 import { DiagnosticLevel } from "../diagnostic/DiagnosticLevel.ts";
+import SemanticAnalyzer from "../analysis/SemanticAnalyzer.ts";
 
 class Compiler {
     protected readonly tokenizer = new Tokenizer();
     protected readonly parser = new Parser();
     protected readonly transformer = new Transformer();
     protected readonly generator = new CodeGenerator();
+    protected readonly analyzer = new SemanticAnalyzer();
     protected readonly diagnosticPrinter = new DiagnosticPrinter();
 
-    public async accept(tx: CompilerTransaction) {
-        const compiledRootNodes: RootNode[] = [];
+    public async accept(tx: CompilerTransaction): Promise<string | undefined> {
+        const rootNodes: RootNode[] = [];
         const inputSources = [...(tx.inputSources ?? [])];
 
         for (const filename of tx.inputFiles ?? []) {
@@ -28,19 +30,22 @@ class Compiler {
             });
         }
 
+        const fileMap = new Map<string, string>();
+        this.diagnosticPrinter.setFileMap(fileMap);
+
         for (const { filename, data } of inputSources) {
             const dataBuffer = data.toString("utf8");
+            fileMap.set(filename, dataBuffer);
 
             try {
                 const tokens = this.tokenizer.tokenize(filename, dataBuffer);
                 const rootNode = this.parser.parse(tokens);
-                compiledRootNodes.push(rootNode);
+                rootNodes.push(rootNode);
             } catch (error) {
                 if (isLocatableError(error)) {
-                    return this.diagnosticPrinter.print({
+                    this.diagnosticPrinter.print({
                         code: DiagnosticCode.SyntaxError,
                         level: DiagnosticLevel.Error,
-                        inputLines: dataBuffer.split("\n"),
                         location: error.location,
                         message: error.message
                     });
@@ -50,18 +55,37 @@ class Compiler {
             }
         }
 
-        console.dir(compiledRootNodes, {
-            depth: Infinity
-        });
+        if (this.diagnosticPrinter.hasErrors()) {
+            return void this.end();
+        }
+
+        if (tx.debugMode) {
+            console.dir(rootNodes, {
+                depth: Infinity
+            });
+        }
 
         const compiledJSNodes = [];
 
-        for (const rootNode of compiledRootNodes) {
+        for (const rootNode of rootNodes) {
+            const diagnostics = this.analyzer.analyze(rootNode);
+
+            if (diagnostics.length) {
+                this.diagnosticPrinter.print(...diagnostics);
+                continue;
+            }
+
             compiledJSNodes.push(this.transformer.transform(rootNode));
         }
 
-        console.log("Compilation finished:");
-        console.dir(compiledJSNodes, { depth: Infinity });
+        if (this.diagnosticPrinter.hasErrors()) {
+            return void this.end();
+        }
+
+        if (tx.debugMode) {
+            console.log("Compilation finished:");
+            console.dir(compiledJSNodes, { depth: Infinity });
+        }
 
         const generatedCodeString = compiledJSNodes
             .map(node => this.generator.generate(node))
@@ -71,7 +95,18 @@ class Compiler {
             await writeFile(tx.outputFile, generatedCodeString, "utf8");
         }
 
+        this.end();
+
+        if (this.diagnosticPrinter.hasErrors()) {
+            return undefined;
+        }
+
         return generatedCodeString;
+    }
+
+    private end(): boolean {
+        this.diagnosticPrinter.printSummary();
+        return this.diagnosticPrinter.hasErrors();
     }
 }
 

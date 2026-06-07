@@ -10,6 +10,7 @@ import type BinaryExpressionNode from "../frontend/tree/BinaryExpressionNode.ts"
 import type UnaryExpressionNode from "../frontend/tree/UnaryExpressionNode.ts";
 import { AssignmentOperators } from "../frontend/tree/BinaryOperator.ts";
 import ExpressionNode from "../frontend/tree/ExpressionNode.ts";
+import type CallExpressionNode from "../frontend/tree/CallExpressionNode.ts";
 
 class Transformer {
     public transform(node: BaseNode): ESTree.BaseNode {
@@ -17,6 +18,18 @@ class Transformer {
             case NodeType.Root:
                 return this.transformRoot(node as RootNode);
 
+            case NodeType.VariableDeclaration:
+                return this.transformVariableDeclaration(
+                    node as VariableDeclarationNode
+                );
+
+            default:
+                return this.transformExpression(node);
+        }
+    }
+
+    public transformExpression(node: BaseNode): ESTree.Expression {
+        switch (node.type) {
             case NodeType.Literal:
                 return this.transformLiteral(node as LiteralNode);
 
@@ -33,14 +46,23 @@ class Transformer {
                     node as BinaryExpressionNode
                 );
 
-            case NodeType.VariableDeclaration:
-                return this.transformVariableDeclaration(
-                    node as VariableDeclarationNode
-                );
+            case NodeType.CallExpression:
+                return this.transformCallExpression(node as CallExpressionNode);
 
             default:
                 throw new Error(`Unsupported node: ${node}`);
         }
+    }
+
+    protected transformCallExpression(
+        node: CallExpressionNode
+    ): ESTree.CallExpression {
+        return {
+            type: "CallExpression",
+            callee: this.transformExpression(node.callee),
+            arguments: node.args.map(arg => this.transformExpression(arg)),
+            optional: false
+        };
     }
 
     protected transformVariableDeclaration(
@@ -102,7 +124,6 @@ class Transformer {
     protected transformLiteral(node: LiteralNode): ESTree.Literal {
         return {
             type: "Literal",
-            raw: node.value,
             value: node.getJSValue()
         };
     }

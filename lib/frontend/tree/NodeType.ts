@@ -4,8 +4,7 @@ enum NodeType {
     UnaryExpression,
     BinaryExpression,
     VariableDeclaration,
-    Call,
-    MatchExpression,
+    CallExpression,
     Identifier
 }
 

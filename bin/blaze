@@ -1,0 +1,19 @@
+#!/bin/sh
+
+me=`basename "$0"`
+dir=`dirname "$0"`
+abs_dir=`readlink -f "${dir}"`
+
+if test $# -ne 1; then
+    printf "${me}: usage: $0 <source_file>\n" >&2
+    exit 1
+fi
+
+input_file="$1"
+output_file_base=`printf "%s" "${input_file}" | rev | cut -d. -f2- | rev`
+output_file="${output_file_base}.js"
+
+set -e
+
+"${dir}/blazec" "${input_file}" -o "${output_file}"
+exec node --require "${abs_dir}/../lib/stdlib/index.cjs" "${output_file}"

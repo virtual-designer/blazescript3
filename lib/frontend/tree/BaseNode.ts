@@ -1,5 +1,6 @@
 import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
+import type { TreeWalker } from "./TreeWalker.ts";
 
 abstract class BaseNode {
     public abstract readonly type: NodeType;
@@ -8,7 +9,7 @@ abstract class BaseNode {
     public constructor(location: Location) {
         this.location = location;
     }
-    
+
     public branches(): BaseNode[] {
         return [];
     }
@@ -22,7 +23,25 @@ abstract class BaseNode {
             branch.traverse(callback);
         }
     }
-    
+
+    public walk(walker: TreeWalker<this>): void {
+        let result = walker._init?.(this);
+        walker = { ...walker, ...result } as TreeWalker<this>;
+
+        const callback = walker[this.type];
+
+        if (callback) {
+            result = callback(this as never);
+            walker = { ...walker, ...result } as TreeWalker<this>;
+        }
+
+        for (const branch of this.branches()) {
+            branch.walk(walker);
+        }
+
+        walker._cleanup?.(this);
+    }
+
     public toString() {
         return `[${this.constructor.name} type:${this.type}]`;
     }

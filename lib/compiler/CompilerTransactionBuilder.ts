@@ -7,6 +7,12 @@ class CompilerTransactionBuilder {
     private inputFiles?: string[];
     private inputSources?: InputSource[];
     private outputFile?: string;
+    private debugMode?: boolean;
+
+    public setDebugMode(value: boolean) {
+        this.debugMode = value;
+        return this;
+    }
 
     public addInputFile(file: string) {
         this.inputFiles ??= [];
@@ -28,7 +34,7 @@ class CompilerTransactionBuilder {
         this.inputSources?.push({ filename, data });
         return this;
     }
-    
+
     public addInputSources(sources: InputSource[]) {
         this.inputSources ??= [];
         this.inputSources?.push(...sources);
@@ -48,7 +54,8 @@ class CompilerTransactionBuilder {
         return {
             inputFiles: this.inputFiles,
             inputSources: this.inputSources,
-            outputFile: this.outputFile
+            outputFile: this.outputFile,
+            debugMode: this.debugMode,
         };
     }
 }

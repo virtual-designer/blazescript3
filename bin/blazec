@@ -49,7 +49,7 @@ try {
                 chalk.red.bold("error: ") +
                 chalk.white(error.message)
         );
-        
+
         exit(1);
     }
 
@@ -67,4 +67,6 @@ const tx = new CompilerTransactionBuilder()
     .setOutputFile(values.output ?? "out.js")
     .build();
 
-await compiler.accept(tx);
+if (await compiler.accept(tx) === undefined) {
+    exit(1);
+}

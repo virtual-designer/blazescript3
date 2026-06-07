@@ -3,6 +3,38 @@ import type { Diagnostic } from "./Diagnostic.ts";
 import { DiagnosticLevel } from "./DiagnosticLevel.ts";
 
 class DiagnosticPrinter {
+    private warnings = 0;
+    private errors = 0;
+    private fileMap = new Map<string, string>();
+    private cachedLineMap = new Map<string, readonly string[]>();
+
+    public setFileMap(map: Map<string, string>) {
+        this.fileMap = map;
+    }
+
+    public getLineList(filename: string) {
+        let list = this.cachedLineMap.get(filename);
+
+        if (list !== undefined) {
+            return list;
+        }
+
+        const contents = this.fileMap.get(filename);
+
+        if (contents === undefined) {
+            return undefined;
+        }
+
+        list = contents.split("\n");
+        this.cachedLineMap.set(filename, list);
+        return list;
+    }
+
+    public reset() {
+        this.warnings = 0;
+        this.errors = 0;
+    }
+
     private getLevelChalk(level: DiagnosticLevel) {
         switch (level) {
             case DiagnosticLevel.Note:
@@ -31,6 +63,12 @@ class DiagnosticPrinter {
 
     public print(...diagnostics: Diagnostic[]) {
         for (const diagnostic of diagnostics) {
+            if (diagnostic.level === DiagnosticLevel.Warning) {
+                this.warnings++;
+            } else if (diagnostic.level === DiagnosticLevel.Error) {
+                this.errors++;
+            }
+
             this.printLog(
                 diagnostic,
                 chalk.whiteBright.bold(
@@ -39,10 +77,16 @@ class DiagnosticPrinter {
                     this.getLevelChalk(diagnostic.level).bold(
                         diagnostic.level + ": "
                     ) +
-                    chalk.whiteBright(diagnostic.message)
+                    chalk.whiteBright(diagnostic.message) +
+                    chalk.whiteBright(" [") +
+                    this.getLevelChalk(diagnostic.level).bold(
+                        `BL${diagnostic.code.toString().padStart(4, "0")}`
+                    ) +
+                    chalk.whiteBright("]")
             );
 
             this.printSource(diagnostic);
+            this.printLog(diagnostic, "");
         }
     }
 
@@ -63,7 +107,8 @@ class DiagnosticPrinter {
         const pad = Math.max(endLineNumberString.length, 3);
 
         for (let i = begin; i <= diagnostic.location.end[0]; i++) {
-            const line = diagnostic.inputLines[i - 1] ?? "";
+            const line =
+                this.getLineList(diagnostic.location.filename)?.[i - 1] ?? "";
             const lineNumber = i.toString().padStart(pad, " ");
             const inNode =
                 i >= diagnostic.location.start[0] &&
@@ -100,18 +145,52 @@ class DiagnosticPrinter {
     private highlight(line: string) {
         return line
             .replaceAll(
-                /[A-Za-z_$][A-Za-z0-9_$]+/g,
-                match => `${chalk.whiteBright.bold(match)}`
+                /(\x1b\[\d+(;\d+)*m)?([A-Za-z_$][A-Za-z0-9_$]*)/g,
+                match => `${chalk.whiteBright(this.stripANSI(`${match}`))}`
             )
             .replaceAll(
                 /let|final|const|function|class|type|public|private|protected|override|extends|implements|uses|import|static|operator/g,
-                match => `${chalk.blueBright.bold(match)}`
+                match => `${chalk.blueBright.bold(this.stripANSI(match))}`
             )
             .replaceAll(
-                /[+\-*/%&(&&)|(||)?~(>>)(<<)]?=/g,
+                /[+\-*/%&(&&)|(||)?~(>>)(<<)=]/g,
                 match => `${chalk.yellow(match)}`
             )
-            .replaceAll(/;/g, match => `${chalk.gray(match)}`);
+            .replaceAll(/;/g, match => `${chalk.gray(match)}`)
+            .replaceAll(/:/g, match => `${chalk.blueBright.bold(match)}`)
+            .replaceAll(
+                /("(.*)(!?"))|('(.*)(!?'))/g,
+                match => `${chalk.green(this.stripANSI(match))}`
+            );
+    }
+
+    private stripANSI(str: string) {
+        return str.replaceAll(/\x1b\[\d+(;\d+)*m/gi, "");
+    }
+
+    public printSummary() {
+        if (this.warnings > 0 || this.errors > 0) {
+            let str = "";
+
+            if (this.errors > 0) {
+                str += `${this.errors} error${this.errors === 1 ? "" : "s"} `;
+            }
+
+            if (this.warnings > 0) {
+                if (str) {
+                    str += "and ";
+                }
+
+                str += `${this.warnings} warning${this.warnings === 1 ? "" : "s"} `;
+            }
+
+            str += "generated.";
+            console.info(chalk.whiteBright.bold(str));
+        }
+    }
+
+    public hasErrors(): boolean {
+        return this.errors > 0;
     }
 }
 
