@@ -8,6 +8,8 @@ import type VariableDeclarationNode from "../frontend/tree/VariableDeclarationNo
 import VariableDeclarationKind from "../frontend/tree/VariableDeclarationKind.ts";
 import type BinaryExpressionNode from "../frontend/tree/BinaryExpressionNode.ts";
 import type UnaryExpressionNode from "../frontend/tree/UnaryExpressionNode.ts";
+import { AssignmentOperators } from "../frontend/tree/BinaryOperator.ts";
+import ExpressionNode from "../frontend/tree/ExpressionNode.ts";
 
 class Transformer {
     public transform(node: BaseNode): ESTree.BaseNode {
@@ -61,12 +63,21 @@ class Transformer {
 
     protected transformBinaryExpression(
         node: BinaryExpressionNode
-    ): ESTree.BinaryExpression {
+    ): ESTree.BinaryExpression | ESTree.AssignmentExpression {
+        if (AssignmentOperators.includes(node.operator)) {
+            return {
+                type: "AssignmentExpression",
+                left: this.transform(node.left) as ESTree.Pattern,
+                right: this.transform(node.right) as ESTree.Expression,
+                operator: node.operator as ESTree.AssignmentOperator
+            };
+        }
+
         return {
             type: "BinaryExpression",
             left: this.transform(node.left) as ESTree.Expression,
             right: this.transform(node.right) as ESTree.Expression,
-            operator: node.operator
+            operator: node.operator as ESTree.BinaryOperator
         };
     }
 
@@ -96,13 +107,24 @@ class Transformer {
         };
     }
 
+    protected transformBlockChild(node: BaseNode): ESTree.Statement {
+        const esNode = this.transform(node);
+
+        if (node instanceof ExpressionNode) {
+            return {
+                type: "ExpressionStatement",
+                expression: esNode as ESTree.Expression
+            };
+        }
+
+        return esNode as ESTree.Statement;
+    }
+
     protected transformRoot(node: RootNode): ESTree.Program {
         return {
             type: "Program",
             sourceType: "script",
-            body: node.children.map(
-                this.transform.bind(this)
-            ) as ESTree.Declaration[]
+            body: node.children.map(this.transformBlockChild.bind(this))
         };
     }
 }

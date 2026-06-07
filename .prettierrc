@@ -6,6 +6,7 @@
     "singleQuote": false,
     "jsxSingleQuote": false,
     "useTabs": false,
+    "tabWidth": 4,
     "overrides": [
         {
             "files": ["*.yml", "*.yaml"],

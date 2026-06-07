@@ -1,14 +1,18 @@
 import Token from "../lexer/Token.ts";
 import TokenType from "../lexer/TokenType.ts";
+import AssignmentExpressionNode from "../tree/AssignmentExpressionNode.ts";
 import type BaseNode from "../tree/BaseNode.ts";
 import BinaryExpressionNode from "../tree/BinaryExpressionNode.ts";
-import BinaryOperator from "../tree/BinaryOperator.ts";
+import BinaryOperator, {
+    type AssignmentOperator
+} from "../tree/BinaryOperator.ts";
 import CallExpressionNode from "../tree/CallExpressionNode.ts";
 import type ExpressionNode from "../tree/ExpressionNode.ts";
 import IdentifierNode from "../tree/IdentifierNode.ts";
 import LiteralNode from "../tree/LiteralNode.ts";
 import LiteralNodeKind from "../tree/LiteralNodeKind.ts";
 import type { Location } from "../tree/Location.ts";
+import NodeType from "../tree/NodeType.ts";
 import RootNode from "../tree/RootNode.ts";
 import UnaryExpressionNode from "../tree/UnaryExpressionNode.ts";
 import UnaryOperator from "../tree/UnaryOperator.ts";
@@ -26,7 +30,17 @@ type ParserContext = {
     expect(types?: TokenType[]): Token;
 };
 
+type ErrorOptions = {
+    message: string;
+    nodes?: (BaseNode | Token)[];
+    location?: Location;
+};
+
 class Parser {
+    protected readonly assignmentOperatorMap = {
+        [TokenType.Equal]: BinaryOperator.Assignment
+    } satisfies Record<number, AssignmentOperator>;
+
     protected readonly comparisonOperatorMap = {
         [TokenType.EqualEqual]: BinaryOperator.Equal,
         [TokenType.NotEqual]: BinaryOperator.NotEqual,
@@ -46,6 +60,15 @@ class Parser {
         [TokenType.Pipe]: BinaryOperator.Union,
         [TokenType.Ampersand]: BinaryOperator.Intersection
     } as const;
+
+    protected error(options: ErrorOptions): never {
+        throw new ParserError(
+            options.message,
+            options.nodes
+                ? this.combineLocations(...options.nodes)
+                : options.location!
+        );
+    }
 
     protected combineLocations(...nodes: (BaseNode | Token)[]): Location {
         let start = [
@@ -219,7 +242,7 @@ class Parser {
 
         while (context.peek()?.type === TokenType.ParenthesisOpen) {
             const args: ExpressionNode[] = [];
-            
+
             context.expect([TokenType.ParenthesisOpen]);
 
             while (!context.isEOF()) {
@@ -376,8 +399,59 @@ class Parser {
         return left;
     }
 
+    protected parseAssignmentExpression(
+        context: ParserContext
+    ): ExpressionNode {
+        let left: ExpressionNode = this.parseComparisonExpression(context);
+        const leftTypes = [NodeType.Identifier];
+
+        if (!leftTypes.includes(left.type)) {
+            return left;
+        }
+
+        if (
+            context.peek()?.type !== TokenType.Equal &&
+            context.peek(1)?.type !== TokenType.Equal
+        ) {
+            return left;
+        }
+
+        let token: Token;
+
+        if (context.peek()?.type === TokenType.Equal) {
+            token = context.peek()!;
+        } else if (context.peek(1)?.type === TokenType.Equal) {
+            token = context.peek()!;
+            context.consume();
+        } else {
+            this.error({ message: "Invalid state", nodes: [left] });
+        }
+
+        const operator =
+            this.assignmentOperatorMap[
+                token.type as keyof typeof this.assignmentOperatorMap
+            ];
+
+        if (!(token.type in this.assignmentOperatorMap)) {
+            this.error({ message: `Unexpected token`, nodes: [token] });
+        }
+
+        context.consume();
+
+        const right = this.parseAssignmentExpression(context);
+
+        left = new AssignmentExpressionNode(
+            operator,
+            left,
+            right,
+            this.combineLocations(left, right)
+        );
+
+        return left;
+    }
+
     protected parseExpression(context: ParserContext): ExpressionNode {
-        return this.parseComparisonExpression(context);
+        return this.parseAssignmentExpression(context);
     }
 
     protected parseTypeSimpleExpression(
