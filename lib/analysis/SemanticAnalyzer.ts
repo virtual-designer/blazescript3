@@ -151,12 +151,21 @@ class SemanticAnalyzer {
                         level: DiagnosticLevel.Warning,
                         location: symbolDefinition.node.identifier.location
                     });
-                } else if (!symbolDefinition.isAssigned && symbolDefinition.node.kind === VariableDeclarationKind.Let) {
+                } else if (
+                    !symbolDefinition.isAssigned &&
+                    symbolDefinition.node.kind === VariableDeclarationKind.Let
+                ) {
                     diagnostics.push({
-                        message: `'${symbolName}' is never assigned; consider making it 'final'`,
+                        message: `let '${symbolName}' is never reassigned`,
                         code: DiagnosticCode.ReadonlyVariable,
                         level: DiagnosticLevel.Warning,
-                        location: symbolDefinition.node.identifier.location
+                        location: symbolDefinition.node.identifier.location,
+                        suggestions: [
+                            {
+                                columnOffset: symbolDefinition.node.location.start[1] - symbolDefinition.node.identifier.location.start[1],
+                                message: `Consider using 'final'`
+                            }
+                        ]
                     });
                 }
             }

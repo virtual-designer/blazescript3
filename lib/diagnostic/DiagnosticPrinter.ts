@@ -105,9 +105,10 @@ class DiagnosticPrinter {
 
         const endLineNumberString = diagnostic.location.end[0].toString();
         const pad = Math.max(endLineNumberString.length, 3);
+        let line = "";
 
         for (let i = begin; i <= diagnostic.location.end[0]; i++) {
-            const line =
+            line =
                 this.getLineList(diagnostic.location.filename)?.[i - 1] ?? "";
             const lineNumber = i.toString().padStart(pad, " ");
             const inNode =
@@ -131,16 +132,6 @@ class DiagnosticPrinter {
         const colEnd = diagnostic.location.end[1];
         const colLength = colEnd - colStart;
 
-        const underline =
-            " ".repeat(colStart - 1) +
-            "^" +
-            "~".repeat(Math.max(colLength - 1, 0));
-
-        this.printLog(
-            diagnostic,
-            ` ${" ".repeat(pad)}${this.getLevelChalk(diagnostic.level).bold(` | ${underline}`)}`
-        );
-
         const suggestions = diagnostic.suggestions;
 
         if (!suggestions) {
@@ -150,18 +141,54 @@ class DiagnosticPrinter {
         const sortedSuggestions = suggestions.toSorted(
             (a, b) => (b.columnOffset ?? 0) - (a.columnOffset ?? 0)
         );
-        const slashOffsets: number[] = [];
+        const barOffsets: number[] = [];
 
         for (const suggestion of sortedSuggestions) {
-            slashOffsets.unshift(suggestion.columnOffset ?? 0);
+            barOffsets.unshift(suggestion.columnOffset ?? 0);
         }
 
-        for (const suggestion of sortedSuggestions) {
-            let suggestionPad = " ".repeat(colStart - 1);
+        const smallestOffset = Math.min(...barOffsets);
+        let underline = "";
 
-            for (let i = 0; i <= (suggestion.columnOffset ?? 0); i++) {
-                if (slashOffsets.includes(i)) {
-                    suggestionPad += i === (suggestion.columnOffset ?? 0) ? this.getLevelChalk(diagnostic.level).bold("|") : chalk.gray.bold("|");
+        for (let i = 0; i < line.length; i++) {
+            const computedIndex = smallestOffset < 0 ? smallestOffset + i : i;
+
+            if (i === colStart - 1) {
+                underline += "^" + "~".repeat(colLength - 1);
+            } else if (i >= colStart - 1 && i <= colStart + colLength - 1) {
+                continue;
+            } else if (barOffsets.includes(computedIndex)) {
+                underline += chalk.gray.bold("|");
+            } else {
+                underline += " ";
+            }
+        }
+
+        this.printLog(
+            diagnostic,
+            ` ${" ".repeat(pad)}${this.getLevelChalk(diagnostic.level).bold(` | ${underline}`)}`
+        );
+
+        for (const suggestion of sortedSuggestions) {
+            let suggestionPad = "";
+
+            for (
+                let i = 0;
+                i <= colStart + (suggestion.columnOffset ?? 0) - 1;
+                i++
+            ) {
+                const computedIndex =
+                    smallestOffset < 0 ? smallestOffset + i : i;
+
+                if (barOffsets.includes(computedIndex)) {
+                    suggestionPad +=
+                        computedIndex === (suggestion.columnOffset ?? 0)
+                            ? chalk.white.bold("|")
+                            : chalk.gray.bold("|");
+
+                    if (computedIndex === (suggestion.columnOffset ?? 0)) {
+                        break;
+                    }
                 } else {
                     suggestionPad += " ";
                 }
@@ -169,7 +196,7 @@ class DiagnosticPrinter {
 
             this.printLog(
                 diagnostic,
-                ` ${" ".repeat(pad)}${this.getLevelChalk(diagnostic.level).bold(`   ${suggestionPad}`)} ${chalk.whiteBright(suggestion.message)}`
+                ` ${" ".repeat(pad)}${this.getLevelChalk(diagnostic.level).bold(`   ${suggestionPad}`)} ${chalk.white(suggestion.message)}`
             );
         }
     }
