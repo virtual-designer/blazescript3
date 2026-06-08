@@ -8,6 +8,8 @@ enum NodeType {
     Identifier,
     MatchExpression,
     MatchExpressionCase,
+    IfStatement,
+    BlockStatement,
 }
 
 export default NodeType;

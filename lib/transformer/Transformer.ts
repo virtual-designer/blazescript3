@@ -16,6 +16,8 @@ import type CallExpressionNode from "../frontend/tree/CallExpressionNode.ts";
 import type MatchExpressionNode from "../frontend/tree/MatchExpressionNode.ts";
 import type MatchExpressionCaseNode from "../frontend/tree/MatchExpressionCaseNode.ts";
 import { MatchExpressionCaseKind } from "../frontend/tree/MatchExpressionCaseNode.ts";
+import type IfStatementNode from "../frontend/tree/IfStatementNode.ts";
+import type BlockStatementNode from "../frontend/tree/BlockStatementNode.ts";
 
 class Transformer {
     private random(suffix: string, prefix: string = "") {
@@ -32,6 +34,12 @@ class Transformer {
                 return this.transformVariableDeclaration(
                     node as VariableDeclarationNode
                 );
+
+            case NodeType.IfStatement:
+                return this.transformIfStatement(node as IfStatementNode);
+
+            case NodeType.BlockStatement:
+                return this.transformBlockStatement(node as BlockStatementNode);
 
             default:
                 return this.transformExpression(node);
@@ -69,6 +77,26 @@ class Transformer {
         }
     }
 
+    protected transformBlockStatement(
+        node: BlockStatementNode
+    ): ESTree.BlockStatement {
+        return {
+            type: "BlockStatement",
+            body: node.children.map(this.transformBlockChild.bind(this))
+        };
+    }
+
+    protected transformIfStatement(node: IfStatementNode): ESTree.IfStatement {
+        return {
+            type: "IfStatement",
+            test: this.transformExpression(node.condition),
+            consequent: this.transform(node.thenBlock) as ESTree.Statement,
+            alternate: node.elseBlock
+                ? (this.transform(node.elseBlock) as ESTree.Statement)
+                : undefined,
+        };
+    }
+
     protected transformMatchExpression(
         node: MatchExpressionNode
     ): ESTree.Expression {
@@ -78,9 +106,9 @@ class Transformer {
 
         for (const definedCase of node.cases) {
             if (
-                definedCase.kind === MatchExpressionCaseKind.Comparsion &&
+                definedCase.kind === MatchExpressionCaseKind.Comparison &&
                 definedCase.comparisonOperator === BinaryOperator.Equal &&
-                definedCase.comparsionTarget &&
+                definedCase.comparisonTarget &&
                 !definedCase.condition
             ) {
                 equalCaseStack.push(definedCase);
@@ -99,7 +127,7 @@ class Transformer {
                     cases.push({
                         type: "SwitchCase",
                         test: this.transformExpression(
-                            equalCase.comparsionTarget!
+                            equalCase.comparisonTarget!
                         ),
                         consequent: [consequent]
                     });
@@ -126,7 +154,7 @@ class Transformer {
 
                     break;
 
-                case MatchExpressionCaseKind.Comparsion:
+                case MatchExpressionCaseKind.Comparison:
                     {
                         let cond: ESTree.Statement = {
                             type: "IfStatement",
@@ -139,7 +167,7 @@ class Transformer {
                                 operator:
                                     definedCase.comparisonOperator || "==",
                                 right: this.transformExpression(
-                                    definedCase.comparsionTarget!
+                                    definedCase.comparisonTarget!
                                 )
                             },
                             consequent: {

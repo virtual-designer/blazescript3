@@ -44,6 +44,7 @@ class Tokenizer {
         false: TokenType.BooleanLiteral,
         null: TokenType.NullLiteral,
         if: TokenType.If,
+        else: TokenType.Else,
         case: TokenType.Case,
         default: TokenType.Default,
     } as const;

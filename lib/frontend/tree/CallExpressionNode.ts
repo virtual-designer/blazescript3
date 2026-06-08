@@ -1,4 +1,3 @@
-import type BaseNode from "./BaseNode.ts";
 import ExpressionNode from "./ExpressionNode.ts";
 import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
@@ -18,7 +17,7 @@ class CallExpressionNode extends ExpressionNode {
         this.args = args;
     }
 
-    public override branches(): BaseNode[] {
+    public override branches() {
         return [...super.branches(), this.callee, ...this.args];
     }
 }

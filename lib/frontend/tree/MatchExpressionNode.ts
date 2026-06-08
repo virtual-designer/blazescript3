@@ -1,4 +1,3 @@
-import type BaseNode from "./BaseNode.ts";
 import ExpressionNode from "./ExpressionNode.ts";
 import type { Location } from "./Location.ts";
 import type MatchExpressionCaseNode from "./MatchExpressionCaseNode.ts";
@@ -19,7 +18,7 @@ class MatchExpressionNode extends ExpressionNode {
         this.cases = cases;
     }
 
-    public override branches(): BaseNode[] {
+    public override branches() {
         return [...super.branches(), this.subject, ...this.cases];
     }
 }

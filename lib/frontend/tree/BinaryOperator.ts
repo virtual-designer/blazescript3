@@ -15,7 +15,7 @@ enum BinaryOperator {
     Intersection = "&"
 }
 
-export const ComparsionOperatorsExact = [
+export const ComparisonOperatorsExact = [
     BinaryOperator.Equal,
     BinaryOperator.NotEqual,
     BinaryOperator.LessThan,
@@ -23,9 +23,9 @@ export const ComparsionOperatorsExact = [
     BinaryOperator.GreaterThan,
     BinaryOperator.GreaterThanOrEqual,
 ] as const;
-export const ComparsionOperators = ComparsionOperatorsExact as readonly BinaryOperator[];
-export type ComparsionOperator = (typeof ComparsionOperatorsExact)[Extract<
-    keyof typeof ComparsionOperatorsExact,
+export const ComparisonOperators = ComparisonOperatorsExact as readonly BinaryOperator[];
+export type ComparisonOperator = (typeof ComparisonOperatorsExact)[Extract<
+    keyof typeof ComparisonOperatorsExact,
     number
 >];
 
