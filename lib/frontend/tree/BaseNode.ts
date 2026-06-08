@@ -10,8 +10,12 @@ abstract class BaseNode {
         this.location = location;
     }
 
-    public branches(): BaseNode[] {
+    public branches(): (BaseNode | null | undefined)[] {
         return [];
+    }
+
+    public filteredBranches(): BaseNode[] {
+        return this.branches().filter(b => !!b);
     }
 
     public traverse(callback: (node: BaseNode) => boolean) {
@@ -19,7 +23,7 @@ abstract class BaseNode {
             return;
         }
 
-        for (const branch of this.branches()) {
+        for (const branch of this.filteredBranches()) {
             branch.traverse(callback);
         }
     }
@@ -35,7 +39,7 @@ abstract class BaseNode {
             walker = { ...walker, ...result } as TreeWalker<this>;
         }
 
-        for (const branch of this.branches()) {
+        for (const branch of this.filteredBranches()) {
             branch.walk(walker);
         }
 

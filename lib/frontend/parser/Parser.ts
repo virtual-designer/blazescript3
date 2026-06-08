@@ -5,11 +5,13 @@ import type BaseNode from "../tree/BaseNode.ts";
 import BinaryExpressionNode from "../tree/BinaryExpressionNode.ts";
 import BinaryOperator, {
     type AssignmentOperator,
-    type ComparsionOperator
+    type ComparisonOperator
 } from "../tree/BinaryOperator.ts";
+import BlockStatementNode from "../tree/BlockStatementNode.ts";
 import CallExpressionNode from "../tree/CallExpressionNode.ts";
 import type ExpressionNode from "../tree/ExpressionNode.ts";
 import IdentifierNode from "../tree/IdentifierNode.ts";
+import IfStatementNode from "../tree/IfStatementNode.ts";
 import LiteralNode from "../tree/LiteralNode.ts";
 import LiteralNodeKind from "../tree/LiteralNodeKind.ts";
 import type { Location } from "../tree/Location.ts";
@@ -189,20 +191,20 @@ class Parser {
 
             let condition: ExpressionNode | null = null;
             let caseExpression: ExpressionNode | null = null;
-            let comparsionOperator: ComparsionOperator | null = null;
+            let comparisonOperator: ComparisonOperator | null = null;
 
             if (caseToken.type !== TokenType.Default) {
                 const nextToken = context.peek();
 
                 if (nextToken && nextToken.type in this.comparisonOperatorMap) {
                     context.consume();
-                    comparsionOperator =
+                    comparisonOperator =
                         this.comparisonOperatorMap[
                             nextToken.type as keyof typeof this.comparisonOperatorMap
                         ];
                     caseExpression = this.parseExpression(context);
                 } else {
-                    comparsionOperator = BinaryOperator.Equal;
+                    comparisonOperator = BinaryOperator.Equal;
                     caseExpression = this.parseExpression(context);
                 }
 
@@ -222,9 +224,9 @@ class Parser {
                 new MatchExpressionCaseNode(
                     caseToken.type === TokenType.Default
                         ? MatchExpressionCaseKind.Default
-                        : MatchExpressionCaseKind.Comparsion,
+                        : MatchExpressionCaseKind.Comparison,
                     body,
-                    comparsionOperator,
+                    comparisonOperator,
                     caseExpression,
                     condition,
                     this.combineLocations(caseToken, semicolonToken)
@@ -622,7 +624,66 @@ class Parser {
         );
     }
 
-    protected parseStatement(context: ParserContext): BaseNode {
+    protected parseBlockStatement(context: ParserContext): BaseNode {
+        const braceOpenToken = context.expect([TokenType.BraceOpen]);
+        const statements = [];
+
+        while (
+            !context.isEOF() &&
+            context.peek()?.type !== TokenType.BraceClose
+        ) {
+            statements.push(this.parseStatement(context));
+        }
+
+        const braceCloseToken = context.expect([TokenType.BraceClose]);
+
+        return new BlockStatementNode(
+            statements,
+            this.combineLocations(braceOpenToken, braceCloseToken)
+        );
+    }
+
+    protected parseIfStatement(context: ParserContext): BaseNode {
+        const ifToken = context.expect([TokenType.If]);
+        context.expect([TokenType.ParenthesisOpen]);
+        const condition = this.parseExpression(context);
+        context.expect([TokenType.ParenthesisClose]);
+
+        let thenBlock: ExpressionNode | BlockStatementNode;
+        let elseBlock: ExpressionNode | BlockStatementNode | null = null;
+
+        if (context.peek()?.type === TokenType.BraceOpen) {
+            thenBlock = this.parseBlockStatement(context);
+        } else {
+            thenBlock = this.parseExpression(context);
+        }
+
+        if (context.peek()?.type === TokenType.Else) {
+            context.consume();
+
+            if (context.peek()?.type === TokenType.BraceOpen) {
+                elseBlock = this.parseBlockStatement(context);
+            } else {
+                elseBlock = this.parseExpression(context);
+            }
+        }
+
+        return new IfStatementNode(
+            condition,
+            thenBlock,
+            elseBlock,
+            this.combineLocations(
+                ifToken,
+                thenBlock,
+                ...[elseBlock].filter(v => !!v)
+            )
+        );
+    }
+
+    protected parseStatement(
+        context: ParserContext,
+        semicolon = true
+    ): BaseNode {
         let node: BaseNode;
 
         switch (context.peek()?.type) {
@@ -632,9 +693,21 @@ class Parser {
                 node = this.parseVariableDeclaration(context);
                 break;
 
+            case TokenType.If:
+                node = this.parseIfStatement(context);
+                break;
+
+            case TokenType.BraceOpen:
+                node = this.parseBlockStatement(context);
+                break;
+
             default:
                 node = this.parseExpression(context);
                 break;
+        }
+
+        if (semicolon && [NodeType.VariableDeclaration].includes(node.type)) {
+            context.expect([TokenType.Semicolon]);
         }
 
         while (

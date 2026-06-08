@@ -36,6 +36,7 @@ enum TokenType {
     Pipe,
     Ampersand,
     If,
+    Else,
     Case,
     Default,
     FatArrow,

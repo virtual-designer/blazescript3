@@ -1,5 +1,4 @@
 import type AssignmentExpressionNode from "./AssignmentExpressionNode.ts";
-import type BaseNode from "./BaseNode.ts";
 import BinaryOperator from "./BinaryOperator.ts";
 import ExpressionNode from "./ExpressionNode.ts";
 import type { Location } from "./Location.ts";
@@ -23,7 +22,7 @@ class BinaryExpressionNode extends ExpressionNode {
         this.right = right;
     }
 
-    public override branches(): BaseNode[] {
+    public override branches() {
         return [...super.branches(), this.left, this.right];
     }
 

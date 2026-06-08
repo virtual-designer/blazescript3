@@ -1,28 +1,28 @@
 import BaseNode from "./BaseNode.ts";
-import type { ComparsionOperator } from "./BinaryOperator.ts";
+import type { ComparisonOperator } from "./BinaryOperator.ts";
 import type ExpressionNode from "./ExpressionNode.ts";
 import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
 
 export enum MatchExpressionCaseKind {
     Default,
-    Comparsion,
+    Comparison,
     Pattern
 }
 
 class MatchExpressionCaseNode extends BaseNode {
     public override readonly type = NodeType.MatchExpressionCase;
     public readonly kind: MatchExpressionCaseKind;
-    public readonly comparisonOperator: ComparsionOperator | null;
-    public readonly comparsionTarget: ExpressionNode | null;
+    public readonly comparisonOperator: ComparisonOperator | null;
+    public readonly comparisonTarget: ExpressionNode | null;
     public readonly condition: ExpressionNode | null;
     public readonly body: ExpressionNode;
 
     public constructor(
         kind: MatchExpressionCaseKind,
         body: ExpressionNode,
-        comparisonOperator: ComparsionOperator | null,
-        comparsionTarget: ExpressionNode | null,
+        comparisonOperator: ComparisonOperator | null,
+        comparisonTarget: ExpressionNode | null,
         condition: ExpressionNode | null,
         location: Location
     ) {
@@ -30,7 +30,7 @@ class MatchExpressionCaseNode extends BaseNode {
         this.kind = kind;
         this.body = body;
         this.comparisonOperator = comparisonOperator;
-        this.comparsionTarget = comparsionTarget;
+        this.comparisonTarget = comparisonTarget;
         this.condition = condition;
     }
 
@@ -38,7 +38,7 @@ class MatchExpressionCaseNode extends BaseNode {
         return [
             ...super.branches(),
             this.body,
-            this.comparsionTarget,
+            this.comparisonTarget,
             this.condition
         ].filter(v => !!v);
     }
