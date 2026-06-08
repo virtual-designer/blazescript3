@@ -4,4 +4,6 @@ export enum DiagnosticCode {
     IllegalRedefinition,
     InitializationRequired,
     Unused,
+    ReadonlyVariable,
+    UnableToInferType,
 }

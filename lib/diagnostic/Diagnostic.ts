@@ -7,4 +7,10 @@ export type Diagnostic = {
     location: Location;
     code: DiagnosticCode;
     level: DiagnosticLevel;
+    suggestions?: DiagnosticSuggestion[];
+};
+
+export type DiagnosticSuggestion = {
+    columnOffset?: number;
+    message: string;
 };

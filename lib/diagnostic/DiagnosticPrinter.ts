@@ -138,8 +138,40 @@ class DiagnosticPrinter {
 
         this.printLog(
             diagnostic,
-            ` ${" ".repeat(pad)}${this.getLevelChalk(diagnostic.level)(` | ${underline}`)}`
+            ` ${" ".repeat(pad)}${this.getLevelChalk(diagnostic.level).bold(` | ${underline}`)}`
         );
+
+        const suggestions = diagnostic.suggestions;
+
+        if (!suggestions) {
+            return;
+        }
+
+        const sortedSuggestions = suggestions.toSorted(
+            (a, b) => (b.columnOffset ?? 0) - (a.columnOffset ?? 0)
+        );
+        const slashOffsets: number[] = [];
+
+        for (const suggestion of sortedSuggestions) {
+            slashOffsets.unshift(suggestion.columnOffset ?? 0);
+        }
+
+        for (const suggestion of sortedSuggestions) {
+            let suggestionPad = " ".repeat(colStart - 1);
+
+            for (let i = 0; i <= (suggestion.columnOffset ?? 0); i++) {
+                if (slashOffsets.includes(i)) {
+                    suggestionPad += i === (suggestion.columnOffset ?? 0) ? this.getLevelChalk(diagnostic.level).bold("|") : chalk.gray.bold("|");
+                } else {
+                    suggestionPad += " ";
+                }
+            }
+
+            this.printLog(
+                diagnostic,
+                ` ${" ".repeat(pad)}${this.getLevelChalk(diagnostic.level).bold(`   ${suggestionPad}`)} ${chalk.whiteBright(suggestion.message)}`
+            );
+        }
     }
 
     private highlight(line: string) {
@@ -157,7 +189,7 @@ class DiagnosticPrinter {
                 match => `${chalk.yellow(match)}`
             )
             .replaceAll(/;/g, match => `${chalk.gray(match)}`)
-            .replaceAll(/:/g, match => `${chalk.blueBright.bold(match)}`)
+            .replaceAll(/:/g, match => `${chalk.whiteBright.dim(match)}`)
             .replaceAll(
                 /("(.*)(!?"))|('(.*)(!?'))/g,
                 match => `${chalk.green(this.stripANSI(match))}`
