@@ -34,7 +34,11 @@ enum TokenType {
     Const,
     Match,
     Pipe,
-    Ampersand
+    Ampersand,
+    If,
+    Case,
+    Default,
+    FatArrow,
 }
 
 export default TokenType;

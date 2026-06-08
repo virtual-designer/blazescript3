@@ -2,6 +2,8 @@ import BinaryExpressionNode from "./BinaryExpressionNode.ts";
 import CallExpressionNode from "./CallExpressionNode.ts";
 import IdentifierNode from "./IdentifierNode.ts";
 import LiteralNode from "./LiteralNode.ts";
+import MatchExpressionCaseNode from "./MatchExpressionCaseNode.ts";
+import MatchExpressionNode from "./MatchExpressionNode.ts";
 import NodeType from "./NodeType.ts";
 import RootNode from "./RootNode.ts";
 import UnaryExpressionNode from "./UnaryExpressionNode.ts";
@@ -14,7 +16,9 @@ export const NodeMap = {
     [NodeType.Identifier]: IdentifierNode,
     [NodeType.Literal]: LiteralNode,
     [NodeType.UnaryExpression]: UnaryExpressionNode,
-    [NodeType.VariableDeclaration]: VariableDeclarationNode
+    [NodeType.VariableDeclaration]: VariableDeclarationNode,
+    [NodeType.MatchExpression]: MatchExpressionNode,
+    [NodeType.MatchExpressionCase]: MatchExpressionCaseNode,
 } as const;
 
 export type NodeMapType = {

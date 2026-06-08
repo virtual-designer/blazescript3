@@ -8,11 +8,21 @@ import type VariableDeclarationNode from "../frontend/tree/VariableDeclarationNo
 import VariableDeclarationKind from "../frontend/tree/VariableDeclarationKind.ts";
 import type BinaryExpressionNode from "../frontend/tree/BinaryExpressionNode.ts";
 import type UnaryExpressionNode from "../frontend/tree/UnaryExpressionNode.ts";
-import { AssignmentOperators } from "../frontend/tree/BinaryOperator.ts";
+import BinaryOperator, {
+    AssignmentOperators
+} from "../frontend/tree/BinaryOperator.ts";
 import ExpressionNode from "../frontend/tree/ExpressionNode.ts";
 import type CallExpressionNode from "../frontend/tree/CallExpressionNode.ts";
+import type MatchExpressionNode from "../frontend/tree/MatchExpressionNode.ts";
+import type MatchExpressionCaseNode from "../frontend/tree/MatchExpressionCaseNode.ts";
+import { MatchExpressionCaseKind } from "../frontend/tree/MatchExpressionCaseNode.ts";
 
 class Transformer {
+    private random(suffix: string, prefix: string = "") {
+        const rand = Math.floor(Math.random() * 10000);
+        return `t${prefix}${rand}${suffix}`;
+    }
+
     public transform(node: BaseNode): ESTree.BaseNode {
         switch (node.type) {
             case NodeType.Root:
@@ -49,9 +59,134 @@ class Transformer {
             case NodeType.CallExpression:
                 return this.transformCallExpression(node as CallExpressionNode);
 
+            case NodeType.MatchExpression:
+                return this.transformMatchExpression(
+                    node as MatchExpressionNode
+                );
+
             default:
                 throw new Error(`Unsupported node: ${node}`);
         }
+    }
+
+    protected transformMatchExpression(
+        node: MatchExpressionNode
+    ): ESTree.Expression {
+        const subjectVarName = this.random("_subject");
+        const body: ESTree.Statement[] = [];
+        const equalCaseStack: MatchExpressionCaseNode[] = [];
+
+        for (const definedCase of node.cases) {
+            if (
+                definedCase.kind === MatchExpressionCaseKind.Comparsion &&
+                definedCase.comparisonOperator === BinaryOperator.Equal &&
+                definedCase.comparsionTarget &&
+                !definedCase.condition
+            ) {
+                equalCaseStack.push(definedCase);
+                continue;
+            }
+
+            if (equalCaseStack.length) {
+                const cases: ESTree.SwitchCase[] = [];
+
+                for (const equalCase of equalCaseStack) {
+                    const consequent: ESTree.Statement = {
+                        type: "ReturnStatement",
+                        argument: this.transformExpression(equalCase.body)
+                    };
+
+                    cases.push({
+                        type: "SwitchCase",
+                        test: this.transformExpression(
+                            equalCase.comparsionTarget!
+                        ),
+                        consequent: [consequent]
+                    });
+                }
+
+                body.push({
+                    type: "SwitchStatement",
+                    discriminant: {
+                        type: "Identifier",
+                        name: subjectVarName
+                    },
+                    cases
+                });
+            }
+
+            switch (definedCase.kind) {
+                case MatchExpressionCaseKind.Default:
+                    body.push({
+                        type: "ReturnStatement",
+                        argument: this.transformExpression(definedCase.body)
+                    });
+
+                    break;
+
+                case MatchExpressionCaseKind.Comparsion:
+                    {
+                        let cond: ESTree.Statement = {
+                            type: "IfStatement",
+                            test: {
+                                type: "BinaryExpression",
+                                left: {
+                                    type: "Identifier",
+                                    name: subjectVarName
+                                },
+                                operator:
+                                    definedCase.comparisonOperator || "==",
+                                right: this.transformExpression(
+                                    definedCase.comparsionTarget!
+                                )
+                            },
+                            consequent: {
+                                type: "ReturnStatement",
+                                argument: this.transformExpression(
+                                    definedCase.body
+                                )
+                            }
+                        };
+
+                        if (definedCase.condition) {
+                            cond = {
+                                type: "IfStatement",
+                                test: this.transformExpression(
+                                    definedCase.condition
+                                ),
+                                consequent: cond
+                            };
+                        }
+
+                        body.push(cond);
+                    }
+
+                    break;
+
+                default:
+                    throw new Error("Unsupported match case");
+            }
+        }
+
+        return {
+            type: "CallExpression",
+            callee: {
+                type: "ArrowFunctionExpression",
+                params: [
+                    {
+                        type: "Identifier",
+                        name: subjectVarName
+                    }
+                ],
+                expression: false,
+                body: {
+                    type: "BlockStatement",
+                    body
+                }
+            },
+            arguments: [this.transformExpression(node.subject)],
+            optional: false
+        };
     }
 
     protected transformCallExpression(

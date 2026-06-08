@@ -4,7 +4,8 @@ import AssignmentExpressionNode from "../tree/AssignmentExpressionNode.ts";
 import type BaseNode from "../tree/BaseNode.ts";
 import BinaryExpressionNode from "../tree/BinaryExpressionNode.ts";
 import BinaryOperator, {
-    type AssignmentOperator
+    type AssignmentOperator,
+    type ComparsionOperator
 } from "../tree/BinaryOperator.ts";
 import CallExpressionNode from "../tree/CallExpressionNode.ts";
 import type ExpressionNode from "../tree/ExpressionNode.ts";
@@ -12,6 +13,10 @@ import IdentifierNode from "../tree/IdentifierNode.ts";
 import LiteralNode from "../tree/LiteralNode.ts";
 import LiteralNodeKind from "../tree/LiteralNodeKind.ts";
 import type { Location } from "../tree/Location.ts";
+import MatchExpressionCaseNode, {
+    MatchExpressionCaseKind
+} from "../tree/MatchExpressionCaseNode.ts";
+import MatchExpressionNode from "../tree/MatchExpressionNode.ts";
 import NodeType from "../tree/NodeType.ts";
 import RootNode from "../tree/RootNode.ts";
 import UnaryExpressionNode from "../tree/UnaryExpressionNode.ts";
@@ -162,8 +167,85 @@ class Parser {
         });
     }
 
+    protected parseMatchExpression(context: ParserContext): ExpressionNode {
+        const matchToken = context.expect([TokenType.Match]);
+
+        context.expect([TokenType.ParenthesisOpen]);
+        const expression = this.parseExpression(context);
+        context.expect([TokenType.ParenthesisClose]);
+
+        context.expect([TokenType.BraceOpen]);
+
+        const cases = [];
+
+        while (
+            !context.isEOF() &&
+            context.peek()?.type !== TokenType.BraceClose
+        ) {
+            const caseToken = context.expect([
+                TokenType.Default,
+                TokenType.Case
+            ]);
+
+            let condition: ExpressionNode | null = null;
+            let caseExpression: ExpressionNode | null = null;
+            let comparsionOperator: ComparsionOperator | null = null;
+
+            if (caseToken.type !== TokenType.Default) {
+                const nextToken = context.peek();
+
+                if (nextToken && nextToken.type in this.comparisonOperatorMap) {
+                    context.consume();
+                    comparsionOperator =
+                        this.comparisonOperatorMap[
+                            nextToken.type as keyof typeof this.comparisonOperatorMap
+                        ];
+                    caseExpression = this.parseExpression(context);
+                } else {
+                    comparsionOperator = BinaryOperator.Equal;
+                    caseExpression = this.parseExpression(context);
+                }
+
+                if (context.peek()?.type === TokenType.If) {
+                    context.consume();
+                    context.expect([TokenType.ParenthesisOpen]);
+                    condition = this.parseExpression(context);
+                    context.expect([TokenType.ParenthesisClose]);
+                }
+            }
+
+            context.expect([TokenType.FatArrow]);
+            const body = this.parseExpression(context);
+            const semicolonToken = context.expect([TokenType.Semicolon]);
+
+            cases.push(
+                new MatchExpressionCaseNode(
+                    caseToken.type === TokenType.Default
+                        ? MatchExpressionCaseKind.Default
+                        : MatchExpressionCaseKind.Comparsion,
+                    body,
+                    comparsionOperator,
+                    caseExpression,
+                    condition,
+                    this.combineLocations(caseToken, semicolonToken)
+                )
+            );
+        }
+
+        const braceCloseToken = context.expect([TokenType.BraceClose]);
+
+        return new MatchExpressionNode(
+            expression,
+            cases,
+            this.combineLocations(matchToken, braceCloseToken)
+        );
+    }
+
     protected parsePrimaryExpression(context: ParserContext): ExpressionNode {
         switch (context.peek()?.type) {
+            case TokenType.Match:
+                return this.parseMatchExpression(context);
+
             case TokenType.ParenthesisOpen:
                 context.consume();
                 const expression = this.parseExpression(context);

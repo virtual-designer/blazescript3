@@ -66,13 +66,9 @@ class SemanticAnalyzer {
                 scope.symbolTable.set(node.identifier.symbol, {
                     kind: node.kind,
                     isInitialized: !!node.value,
-                    hits: 0,
+                    hits: -1,
                     node
                 });
-
-                return {
-                    [NodeType.Identifier]: () => void 0
-                };
             },
             [NodeType.Identifier]: node => {
                 const symbol = scope.symbolTable.get(node.symbol);
@@ -85,7 +81,7 @@ class SemanticAnalyzer {
 
         this.traverseScope(globalScope, scope => {
             for (const [symbolName, symbolDefinition] of scope.symbolTable) {
-                if (symbolDefinition.hits === 0) {
+                if (symbolDefinition.hits < 1) {
                     diagnostics.push({
                         message: `'${symbolName}' is never used`,
                         code: DiagnosticCode.Unused,

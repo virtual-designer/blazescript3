@@ -72,7 +72,6 @@ class Compiler {
 
             if (diagnostics.length) {
                 this.diagnosticPrinter.print(...diagnostics);
-                continue;
             }
 
             compiledJSNodes.push(this.transformer.transform(rootNode));

@@ -24,7 +24,7 @@ abstract class BaseNode {
         }
     }
 
-    public walk(walker: TreeWalker<this>): void {
+    public walk(walker: Readonly<TreeWalker<this>>): void {
         let result = walker._init?.(this);
         walker = { ...walker, ...result } as TreeWalker<this>;
 

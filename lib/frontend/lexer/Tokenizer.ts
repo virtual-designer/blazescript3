@@ -31,7 +31,8 @@ class Tokenizer {
         "==": TokenType.EqualEqual,
         "!=": TokenType.NotEqual,
         ">=": TokenType.GreaterThanEqual,
-        "<=": TokenType.LessThanEqual
+        "<=": TokenType.LessThanEqual,
+        "=>": TokenType.FatArrow,
     } as const;
 
     public static readonly KEYWORDS = {
@@ -41,7 +42,10 @@ class Tokenizer {
         match: TokenType.Match,
         true: TokenType.BooleanLiteral,
         false: TokenType.BooleanLiteral,
-        null: TokenType.NullLiteral
+        null: TokenType.NullLiteral,
+        if: TokenType.If,
+        case: TokenType.Case,
+        default: TokenType.Default,
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);
@@ -187,7 +191,7 @@ class Tokenizer {
                     col++;
                 }
 
-                if (radix === 10 && str[0] == "0") {
+                if (radix === 10 && str[0] == "0" && str.length > 1) {
                     radix = 8;
                     str = str.slice(1);
                 }
@@ -203,7 +207,7 @@ class Tokenizer {
                     );
                 }
 
-                if (!str) {
+                if (!str.length) {
                     throw new TokenizerError(
                         `Invalid or unexpected end of numeric literal`,
                         {

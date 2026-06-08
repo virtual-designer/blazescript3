@@ -5,7 +5,9 @@ enum NodeType {
     BinaryExpression,
     VariableDeclaration,
     CallExpression,
-    Identifier
+    Identifier,
+    MatchExpression,
+    MatchExpressionCase,
 }
 
 export default NodeType;
