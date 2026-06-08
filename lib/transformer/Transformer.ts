@@ -113,6 +113,8 @@ class Transformer {
                     },
                     cases
                 });
+
+                equalCaseStack.length = 0;
             }
 
             switch (definedCase.kind) {
