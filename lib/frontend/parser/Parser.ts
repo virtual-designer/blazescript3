@@ -9,7 +9,10 @@ import BinaryOperator, {
 } from "../tree/BinaryOperator.ts";
 import BlockStatementNode from "../tree/BlockStatementNode.ts";
 import CallExpressionNode from "../tree/CallExpressionNode.ts";
+import EmptyStatementNode from "../tree/EmptyStatementNode.ts";
 import type ExpressionNode from "../tree/ExpressionNode.ts";
+import ExpressionStatementNode from "../tree/ExpressionStatementNode.ts";
+import ForStatementNode from "../tree/ForStatementNode.ts";
 import IdentifierNode from "../tree/IdentifierNode.ts";
 import IfStatementNode from "../tree/IfStatementNode.ts";
 import LiteralNode from "../tree/LiteralNode.ts";
@@ -21,6 +24,7 @@ import MatchExpressionCaseNode, {
 import MatchExpressionNode from "../tree/MatchExpressionNode.ts";
 import NodeType from "../tree/NodeType.ts";
 import RootNode from "../tree/RootNode.ts";
+import { UnaryExpressionKind } from "../tree/UnaryExpressionKind.ts";
 import UnaryExpressionNode from "../tree/UnaryExpressionNode.ts";
 import UnaryOperator from "../tree/UnaryOperator.ts";
 import VariableDeclarationKind from "../tree/VariableDeclarationKind.ts";
@@ -44,6 +48,12 @@ type ErrorOptions = {
 };
 
 class Parser {
+    protected readonly noSemicolonStatementTypes = [
+        NodeType.IfStatement,
+        NodeType.ForStatement,
+        NodeType.EmptyStatement
+    ];
+
     protected readonly assignmentOperatorMap = {
         [TokenType.Equal]: BinaryOperator.Assignment
     } satisfies Record<number, AssignmentOperator>;
@@ -57,10 +67,17 @@ class Parser {
         [TokenType.GreaterThanEqual]: BinaryOperator.GreaterThanOrEqual
     } as const;
 
-    protected readonly unaryOperatorMap = {
+    protected readonly prefixUnaryOperatorMap = {
         [TokenType.Not]: UnaryOperator.Not,
         [TokenType.Plus]: UnaryOperator.Plus,
-        [TokenType.Minus]: UnaryOperator.Minus
+        [TokenType.Minus]: UnaryOperator.Minus,
+        [TokenType.PlusPlus]: UnaryOperator.Increment,
+        [TokenType.MinusMinus]: UnaryOperator.Decrement
+    } as const;
+
+    protected readonly postfixUnaryOperatorMap = {
+        [TokenType.PlusPlus]: UnaryOperator.Increment,
+        [TokenType.MinusMinus]: UnaryOperator.Decrement
     } as const;
 
     protected readonly typeOperatorMap = {
@@ -359,31 +376,34 @@ class Parser {
         return node;
     }
 
-    protected parseUnaryExpression(context: ParserContext): ExpressionNode {
+    protected parsePrefixUnaryExpression(
+        context: ParserContext
+    ): ExpressionNode {
         const operators: Token[] = [];
 
         while (
             context.peek() &&
-            context.peek()!.type in this.unaryOperatorMap
+            context.peek()!.type in this.prefixUnaryOperatorMap
         ) {
             operators.push(context.consume()!);
         }
 
         if (operators.length) {
-            const operand = this.parsePrimaryExpression(context);
+            const operand = this.parsePostfixUnaryExpression(context);
             let node = operand;
 
             while (operators.length) {
                 const token = operators.pop()!;
 
                 const operator =
-                    this.unaryOperatorMap[
-                        token.type as keyof typeof this.unaryOperatorMap
+                    this.prefixUnaryOperatorMap[
+                        token.type as keyof typeof this.prefixUnaryOperatorMap
                     ];
 
                 node = new UnaryExpressionNode(
                     operator,
                     node,
+                    UnaryExpressionKind.Prefix,
                     this.combineLocations(token, operand)
                 );
             }
@@ -391,13 +411,48 @@ class Parser {
             return node;
         }
 
-        return this.parsePrimaryExpression(context);
+        return this.parsePostfixUnaryExpression(context);
+    }
+
+    protected parsePostfixUnaryExpression(
+        context: ParserContext
+    ): ExpressionNode {
+        let expression = this.parsePrimaryExpression(context);
+        const operators = [];
+
+        while (
+            !context.isEOF() &&
+            context.peek() &&
+            context.peek()!.type in this.postfixUnaryOperatorMap
+        ) {
+            operators.push(context.consume()!);
+        }
+
+        if (!operators.length) {
+            return expression;
+        }
+
+        for (const token of operators) {
+            const operator =
+                this.postfixUnaryOperatorMap[
+                    token.type as keyof typeof this.postfixUnaryOperatorMap
+                ];
+
+            expression = new UnaryExpressionNode(
+                operator,
+                expression,
+                UnaryExpressionKind.Postfix,
+                this.combineLocations(expression, token)
+            );
+        }
+
+        return expression;
     }
 
     protected parseMultiplicativeExpression(
         context: ParserContext
     ): ExpressionNode {
-        let left: ExpressionNode = this.parseUnaryExpression(context);
+        let left: ExpressionNode = this.parsePrefixUnaryExpression(context);
 
         while (
             !context.isEOF() &&
@@ -413,7 +468,7 @@ class Parser {
                       : BinaryOperator.Modulus;
 
             context.consume();
-            const right = this.parseUnaryExpression(context);
+            const right = this.parsePrefixUnaryExpression(context);
 
             left = new BinaryExpressionNode(
                 operator,
@@ -643,19 +698,50 @@ class Parser {
         );
     }
 
+    protected parseForStatement(context: ParserContext): BaseNode {
+        const forToken = context.expect([TokenType.For]);
+        context.expect([TokenType.ParenthesisOpen]);
+        const init =
+            context.peek()?.type === TokenType.Semicolon
+                ? null
+                : this.parseStatement(context, false);
+        context.expect([TokenType.Semicolon]);
+        const condition =
+            context.peek()?.type === TokenType.Semicolon
+                ? null
+                : this.parseExpression(context);
+        context.expect([TokenType.Semicolon]);
+        const mutator =
+            context.peek()?.type === TokenType.ParenthesisClose
+                ? null
+                : this.parseExpression(context);
+        context.expect([TokenType.ParenthesisClose]);
+        const body =
+            context.peek()?.type === TokenType.BraceOpen
+                ? this.parseBlockStatement(context)
+                : this.parseStatement(context);
+        return new ForStatementNode(
+            init,
+            condition,
+            mutator,
+            body,
+            this.combineLocations(forToken, body)
+        );
+    }
+
     protected parseIfStatement(context: ParserContext): BaseNode {
         const ifToken = context.expect([TokenType.If]);
         context.expect([TokenType.ParenthesisOpen]);
         const condition = this.parseExpression(context);
         context.expect([TokenType.ParenthesisClose]);
 
-        let thenBlock: ExpressionNode | BlockStatementNode;
-        let elseBlock: ExpressionNode | BlockStatementNode | null = null;
+        let thenBlock: BaseNode;
+        let elseBlock: BaseNode | null = null;
 
         if (context.peek()?.type === TokenType.BraceOpen) {
             thenBlock = this.parseBlockStatement(context);
         } else {
-            thenBlock = this.parseExpression(context);
+            thenBlock = this.parseStatement(context);
         }
 
         if (context.peek()?.type === TokenType.Else) {
@@ -664,7 +750,7 @@ class Parser {
             if (context.peek()?.type === TokenType.BraceOpen) {
                 elseBlock = this.parseBlockStatement(context);
             } else {
-                elseBlock = this.parseExpression(context);
+                elseBlock = this.parseStatement(context);
             }
         }
 
@@ -678,6 +764,19 @@ class Parser {
                 ...[elseBlock].filter(v => !!v)
             )
         );
+    }
+
+    protected parseEmptyStatement(context: ParserContext): BaseNode {
+        const token = context.expect([TokenType.Semicolon]);
+
+        while (
+            !context.isEOF() &&
+            context.peek()?.type === TokenType.Semicolon
+        ) {
+            context.consume();
+        }
+
+        return new EmptyStatementNode(token.location);
     }
 
     protected parseStatement(
@@ -697,24 +796,36 @@ class Parser {
                 node = this.parseIfStatement(context);
                 break;
 
+            case TokenType.For:
+                node = this.parseForStatement(context);
+                break;
+
             case TokenType.BraceOpen:
                 node = this.parseBlockStatement(context);
                 break;
 
+            case TokenType.Semicolon:
+                node = this.parseEmptyStatement(context);
+                break;
+
             default:
-                node = this.parseExpression(context);
+                const expression = this.parseExpression(context);
+                node = new ExpressionStatementNode(
+                    expression,
+                    expression.location
+                );
                 break;
         }
 
-        if (semicolon && [NodeType.VariableDeclaration].includes(node.type)) {
+        if (semicolon && !this.noSemicolonStatementTypes.includes(node.type)) {
             context.expect([TokenType.Semicolon]);
-        }
 
-        while (
-            !context.isEOF() &&
-            context.peek()?.type === TokenType.Semicolon
-        ) {
-            context.consume();
+            while (
+                !context.isEOF() &&
+                context.peek()?.type === TokenType.Semicolon
+            ) {
+                context.consume();
+            }
         }
 
         return node;

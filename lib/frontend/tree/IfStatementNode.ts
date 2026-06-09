@@ -1,5 +1,4 @@
 import BaseNode from "./BaseNode.ts";
-import type BlockStatementNode from "./BlockStatementNode.ts";
 import type ExpressionNode from "./ExpressionNode.ts";
 import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
@@ -7,13 +6,13 @@ import NodeType from "./NodeType.ts";
 class IfStatementNode extends BaseNode {
     public override readonly type = NodeType.IfStatement;
     public readonly condition: ExpressionNode;
-    public readonly thenBlock: ExpressionNode | BlockStatementNode;
-    public readonly elseBlock: ExpressionNode | BlockStatementNode | null;
+    public readonly thenBlock: BaseNode;
+    public readonly elseBlock: BaseNode | null;
 
     public constructor(
         condition: ExpressionNode,
-        thenBlock: ExpressionNode | BlockStatementNode,
-        elseBlock: ExpressionNode | BlockStatementNode | null = null,
+        thenBlock: BaseNode,
+        elseBlock: BaseNode | null = null,
         location: Location
     ) {
         super(location);

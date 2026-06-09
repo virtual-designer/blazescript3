@@ -26,8 +26,9 @@
     "skipLibCheck": true,
     "rewriteRelativeImportExtensions": true,
     "allowImportingTsExtensions": true,
-
-    "outDir": "./build"
+    "rootDir": ".",
+    "outDir": "./build",
   },
-  "include": ["./lib"]
+  "include": ["./lib"],
+  "exclude": ["./bin"]
 }

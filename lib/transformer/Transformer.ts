@@ -18,6 +18,9 @@ import type MatchExpressionCaseNode from "../frontend/tree/MatchExpressionCaseNo
 import { MatchExpressionCaseKind } from "../frontend/tree/MatchExpressionCaseNode.ts";
 import type IfStatementNode from "../frontend/tree/IfStatementNode.ts";
 import type BlockStatementNode from "../frontend/tree/BlockStatementNode.ts";
+import ExpressionStatementNode from "../frontend/tree/ExpressionStatementNode.ts";
+import type ForStatementNode from "../frontend/tree/ForStatementNode.ts";
+import { UnaryExpressionKind } from "../frontend/tree/UnaryExpressionKind.ts";
 
 class Transformer {
     private random(suffix: string, prefix: string = "") {
@@ -25,7 +28,7 @@ class Transformer {
         return `t${prefix}${rand}${suffix}`;
     }
 
-    public transform(node: BaseNode): ESTree.BaseNode {
+    public transformStatement(node: BaseNode): ESTree.BaseNode {
         switch (node.type) {
             case NodeType.Root:
                 return this.transformRoot(node as RootNode);
@@ -38,11 +41,24 @@ class Transformer {
             case NodeType.IfStatement:
                 return this.transformIfStatement(node as IfStatementNode);
 
+            case NodeType.ForStatement:
+                return this.transformForStatement(node as ForStatementNode);
+
             case NodeType.BlockStatement:
                 return this.transformBlockStatement(node as BlockStatementNode);
 
+            case NodeType.EmptyStatement:
+                return { type: "EmptyStatement" };
+
             default:
-                return this.transformExpression(node);
+                return {
+                    type: "ExpressionStatement",
+                    expression: this.transformExpression(
+                        node instanceof ExpressionStatementNode
+                            ? node.expression
+                            : node
+                    )
+                } satisfies ESTree.ExpressionStatement as ESTree.BaseNode;
         }
     }
 
@@ -86,14 +102,34 @@ class Transformer {
         };
     }
 
+    protected transformForStatement(
+        node: ForStatementNode
+    ): ESTree.ForStatement {
+        return {
+            type: "ForStatement",
+            init: node.init
+                ? (this.transformStatement(node.init) as ESTree.ChainExpression)
+                : undefined,
+            test: node.condition
+                ? this.transformExpression(node.condition)
+                : undefined,
+            update: node.mutator
+                ? this.transformExpression(node.mutator)
+                : undefined,
+            body: this.transformStatement(node.body) as ESTree.Statement
+        };
+    }
+
     protected transformIfStatement(node: IfStatementNode): ESTree.IfStatement {
         return {
             type: "IfStatement",
             test: this.transformExpression(node.condition),
-            consequent: this.transform(node.thenBlock) as ESTree.Statement,
+            consequent: this.transformStatement(
+                node.thenBlock
+            ) as ESTree.Statement,
             alternate: node.elseBlock
-                ? (this.transform(node.elseBlock) as ESTree.Statement)
-                : undefined,
+                ? (this.transformStatement(node.elseBlock) as ESTree.Statement)
+                : undefined
         };
     }
 
@@ -241,7 +277,9 @@ class Transformer {
                     type: "VariableDeclarator",
                     id: this.transformIdentifier(node.identifier),
                     init: node.value
-                        ? (this.transform(node.value) as ESTree.Expression)
+                        ? (this.transformExpression(
+                              node.value
+                          ) as ESTree.Expression)
                         : undefined
                 }
             ]
@@ -254,16 +292,18 @@ class Transformer {
         if (AssignmentOperators.includes(node.operator)) {
             return {
                 type: "AssignmentExpression",
-                left: this.transform(node.left) as ESTree.Pattern,
-                right: this.transform(node.right) as ESTree.Expression,
+                left: this.transformExpression(node.left) as ESTree.Pattern,
+                right: this.transformExpression(
+                    node.right
+                ) as ESTree.Expression,
                 operator: node.operator as ESTree.AssignmentOperator
             };
         }
 
         return {
             type: "BinaryExpression",
-            left: this.transform(node.left) as ESTree.Expression,
-            right: this.transform(node.right) as ESTree.Expression,
+            left: this.transformExpression(node.left) as ESTree.Expression,
+            right: this.transformExpression(node.right) as ESTree.Expression,
             operator: node.operator as ESTree.BinaryOperator
         };
     }
@@ -273,9 +313,13 @@ class Transformer {
     ): ESTree.UnaryExpression {
         return {
             type: "UnaryExpression",
-            argument: this.transform(node.operand) as ESTree.Expression,
-            prefix: true,
-            operator: node.operator
+            argument: this.transformExpression(
+                node.operand
+            ) as ESTree.Expression,
+            prefix: (node.kind === UnaryExpressionKind.Prefix
+                ? true
+                : undefined) as true,
+            operator: node.operator as ESTree.UnaryExpression["operator"]
         };
     }
 
@@ -294,7 +338,7 @@ class Transformer {
     }
 
     protected transformBlockChild(node: BaseNode): ESTree.Statement {
-        const esNode = this.transform(node);
+        const esNode = this.transformStatement(node);
 
         if (node instanceof ExpressionNode) {
             return {

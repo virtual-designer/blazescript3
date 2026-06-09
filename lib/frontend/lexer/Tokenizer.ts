@@ -33,6 +33,8 @@ class Tokenizer {
         ">=": TokenType.GreaterThanEqual,
         "<=": TokenType.LessThanEqual,
         "=>": TokenType.FatArrow,
+        "++": TokenType.PlusPlus,
+        "--": TokenType.MinusMinus,
     } as const;
 
     public static readonly KEYWORDS = {
@@ -47,6 +49,10 @@ class Tokenizer {
         else: TokenType.Else,
         case: TokenType.Case,
         default: TokenType.Default,
+        for: TokenType.For,
+        while: TokenType.While,
+        do: TokenType.Do,
+        in: TokenType.In,
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);

@@ -6,4 +6,5 @@ export enum DiagnosticCode {
     Unused,
     ReadonlyVariable,
     UnableToInferType,
+    InvalidUnaryExpressionOperand,
 }

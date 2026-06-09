@@ -10,6 +10,9 @@ enum NodeType {
     MatchExpressionCase,
     IfStatement,
     BlockStatement,
+    ExpressionStatement,
+    ForStatement,
+    EmptyStatement,
 }
 
 export default NodeType;

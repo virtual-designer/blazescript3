@@ -74,7 +74,7 @@ class Compiler {
                 this.diagnosticPrinter.print(...diagnostics);
             }
 
-            compiledJSNodes.push(this.transformer.transform(rootNode));
+            compiledJSNodes.push(this.transformer.transformStatement(rootNode));
         }
 
         if (this.diagnosticPrinter.hasErrors()) {

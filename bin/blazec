@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// @ts-nocheck
 
 import { parseArgs } from "node:util";
 import Compiler from "../lib/compiler/Compiler.ts";

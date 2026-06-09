@@ -132,12 +132,7 @@ class DiagnosticPrinter {
         const colEnd = diagnostic.location.end[1];
         const colLength = colEnd - colStart;
 
-        const suggestions = diagnostic.suggestions;
-
-        if (!suggestions) {
-            return;
-        }
-
+        const suggestions = diagnostic.suggestions ?? [];
         const sortedSuggestions = suggestions.toSorted(
             (a, b) => (b.columnOffset ?? 0) - (a.columnOffset ?? 0)
         );
@@ -204,6 +199,10 @@ class DiagnosticPrinter {
     private highlight(line: string) {
         return line
             .replaceAll(
+                /[\[\]]/g,
+                match => `${chalk.yellowBright.bold(match)}`
+            )
+            .replaceAll(
                 /(\x1b\[\d+(;\d+)*m)?([A-Za-z_$][A-Za-z0-9_$]*)/g,
                 match => `${chalk.whiteBright(this.stripANSI(`${match}`))}`
             )
@@ -212,8 +211,20 @@ class DiagnosticPrinter {
                 match => `${chalk.blueBright.bold(this.stripANSI(match))}`
             )
             .replaceAll(
-                /[+\-*/%&(&&)|(||)?~(>>)(<<)=]/g,
+                /if|else|for|while|do|switch|match/g,
+                match => `${chalk.magentaBright.bold(this.stripANSI(match))}`
+            )
+            .replaceAll(
+                /[+\-*/%&|?~=]|(>>)|(<<)/g,
                 match => `${chalk.yellow(match)}`
+            )
+            .replaceAll(
+                /[\(\)]/g,
+                match => `${chalk.magenta(match)}`
+            )
+            .replaceAll(
+                /[\{\}]/g,
+                match => `${chalk.whiteBright.bold(match)}`
             )
             .replaceAll(/;/g, match => `${chalk.gray(match)}`)
             .replaceAll(/:/g, match => `${chalk.whiteBright.dim(match)}`)

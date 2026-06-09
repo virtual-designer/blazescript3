@@ -8,6 +8,7 @@ import VariableDeclarationKind from "../frontend/tree/VariableDeclarationKind.ts
 import type VariableDeclarationNode from "../frontend/tree/VariableDeclarationNode.ts";
 import TypeUtils from "../types/TypeUtils.ts";
 import IdentifierNode from "../frontend/tree/IdentifierNode.ts";
+import UnaryOperator from "../frontend/tree/UnaryOperator.ts";
 
 type SyntheticSymbolDefinition = {
     kind: VariableDeclarationKind;
@@ -139,6 +140,29 @@ class SemanticAnalyzer {
                         symbol.isAssigned = true;
                     }
                 }
+            },
+            [NodeType.UnaryExpression]: node => {
+                if (
+                    node.operator === UnaryOperator.Increment ||
+                    node.operator === UnaryOperator.Decrement
+                ) {
+                    if (!(node.operand instanceof IdentifierNode)) {
+                        diagnostics.push({
+                            message: `Invalid operand for ${node.kind} unary expression`,
+                            code: DiagnosticCode.InvalidUnaryExpressionOperand,
+                            level: DiagnosticLevel.Error,
+                            location: node.location
+                        });
+
+                        return;
+                    }
+
+                    const symbol = scope.symbolTable.get(node.operand.symbol);
+
+                    if (symbol) {
+                        symbol.isAssigned = true;
+                    }
+                }
             }
         });
 
@@ -162,7 +186,10 @@ class SemanticAnalyzer {
                         location: symbolDefinition.node.identifier.location,
                         suggestions: [
                             {
-                                columnOffset: symbolDefinition.node.location.start[1] - symbolDefinition.node.identifier.location.start[1],
+                                columnOffset:
+                                    symbolDefinition.node.location.start[1] -
+                                    symbolDefinition.node.identifier.location
+                                        .start[1],
                                 message: `Consider using 'final'`
                             }
                         ]

@@ -1,6 +1,9 @@
 import BinaryExpressionNode from "./BinaryExpressionNode.ts";
 import BlockStatementNode from "./BlockStatementNode.ts";
 import CallExpressionNode from "./CallExpressionNode.ts";
+import EmptyStatementNode from "./EmptyStatementNode.ts";
+import ExpressionStatementNode from "./ExpressionStatementNode.ts";
+import ForStatementNode from "./ForStatementNode.ts";
 import IdentifierNode from "./IdentifierNode.ts";
 import IfStatementNode from "./IfStatementNode.ts";
 import LiteralNode from "./LiteralNode.ts";
@@ -23,6 +26,9 @@ export const NodeMap = {
     [NodeType.MatchExpressionCase]: MatchExpressionCaseNode,
     [NodeType.IfStatement]: IfStatementNode,
     [NodeType.BlockStatement]: BlockStatementNode,
+    [NodeType.ExpressionStatement]: ExpressionStatementNode,
+    [NodeType.ForStatement]: ForStatementNode,
+    [NodeType.EmptyStatement]: EmptyStatementNode,
 } as const;
 
 export type NodeMapType = {

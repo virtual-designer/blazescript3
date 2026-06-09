@@ -40,6 +40,12 @@ enum TokenType {
     Case,
     Default,
     FatArrow,
+    For,
+    While,
+    Do,
+    In,
+    PlusPlus,
+    MinusMinus,
 }
 
 export default TokenType;
