@@ -46,6 +46,7 @@ enum TokenType {
     In,
     PlusPlus,
     MinusMinus,
+    DotDot,
 }
 
 export default TokenType;

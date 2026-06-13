@@ -35,6 +35,7 @@ class Tokenizer {
         "=>": TokenType.FatArrow,
         "++": TokenType.PlusPlus,
         "--": TokenType.MinusMinus,
+        "..": TokenType.DotDot
     } as const;
 
     public static readonly KEYWORDS = {
@@ -52,7 +53,7 @@ class Tokenizer {
         for: TokenType.For,
         while: TokenType.While,
         do: TokenType.Do,
-        in: TokenType.In,
+        in: TokenType.In
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);
@@ -176,15 +177,12 @@ class Tokenizer {
                         input[index] === "_")
                 ) {
                     if (input[index] === ".") {
+                        if (input[index + 1] == ".") {
+                            break;
+                        }
+
                         if (isFloat || radix !== 10) {
-                            throw new TokenizerError(
-                                `Unexpected radix point after numeric literal: ${str}`,
-                                {
-                                    start,
-                                    end: [line, col + 1],
-                                    filename
-                                }
-                            );
+                            break;
                         }
 
                         isFloat = true;
@@ -198,7 +196,12 @@ class Tokenizer {
                     col++;
                 }
 
-                if (radix === 10 && str[0] == "0" && str.length > 1) {
+                if (
+                    radix === 10 &&
+                    str[0] == "0" &&
+                    str.length > 1 &&
+                    !isFloat
+                ) {
                     radix = 8;
                     str = str.slice(1);
                 }

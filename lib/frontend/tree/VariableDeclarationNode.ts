@@ -11,18 +11,21 @@ class VariableDeclarationNode extends BaseNode {
     public readonly identifier: IdentifierNode;
     public readonly annotatedType?: ExpressionNode;
     public readonly value?: ExpressionNode;
+    public readonly inline: boolean;
 
     public constructor(
         kind: VariableDeclarationKind,
         identifier: IdentifierNode,
         annotatedType: ExpressionNode | undefined,
         value: ExpressionNode | undefined,
+        inline = false,
         location: Location
     ) {
         super(location);
         this.kind = kind;
         this.identifier = identifier;
         this.annotatedType = annotatedType;
+        this.inline = inline;
         this.value = value;
     }
 

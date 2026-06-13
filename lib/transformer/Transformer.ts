@@ -21,9 +21,14 @@ import type BlockStatementNode from "../frontend/tree/BlockStatementNode.ts";
 import ExpressionStatementNode from "../frontend/tree/ExpressionStatementNode.ts";
 import type ForStatementNode from "../frontend/tree/ForStatementNode.ts";
 import { UnaryExpressionKind } from "../frontend/tree/UnaryExpressionKind.ts";
+import type WhileStatementNode from "../frontend/tree/WhileStatementNode.ts";
+import type ForInStatementNode from "../frontend/tree/ForInStatementNode.ts";
+import type RangeExpressionNode from "../frontend/tree/RangeExpressionNode.ts";
 
 class Transformer {
-    private random(suffix: string, prefix: string = "") {
+    private readonly BLAZE_GLOBAL_SYMBOL = "__blaze";
+
+    private randomSymbolName(suffix: string, prefix: string = "") {
         const rand = Math.floor(Math.random() * 10000);
         return `t${prefix}${rand}${suffix}`;
     }
@@ -43,6 +48,12 @@ class Transformer {
 
             case NodeType.ForStatement:
                 return this.transformForStatement(node as ForStatementNode);
+
+            case NodeType.ForInStatement:
+                return this.transformForInStatement(node as ForInStatementNode);
+
+            case NodeType.WhileStatement:
+                return this.transformWhileStatement(node as WhileStatementNode);
 
             case NodeType.BlockStatement:
                 return this.transformBlockStatement(node as BlockStatementNode);
@@ -88,6 +99,11 @@ class Transformer {
                     node as MatchExpressionNode
                 );
 
+            case NodeType.RangeExpression:
+                return this.transformRangeExpression(
+                    node as RangeExpressionNode
+                );
+
             default:
                 throw new Error(`Unsupported node: ${node}`);
         }
@@ -120,6 +136,71 @@ class Transformer {
         };
     }
 
+    protected transformRangeExpression(
+        node: RangeExpressionNode
+    ): ESTree.Expression {
+        return {
+            type: "CallExpression",
+            callee: {
+                type: "MemberExpression",
+                object: {
+                    type: "MemberExpression",
+                    object: {
+                        type: "Identifier",
+                        name: this.BLAZE_GLOBAL_SYMBOL
+                    },
+                    property: {
+                        type: "Identifier",
+                        name: "utils"
+                    },
+                    computed: false,
+                    optional: false
+                },
+                property: {
+                    type: "Identifier",
+                    name: "createRangeIterator"
+                },
+                computed: false,
+                optional: false
+            },
+            arguments: [
+                this.transformExpression(node.from),
+                this.transformExpression(node.to),
+                {
+                    type: "Literal",
+                    value: node.fromInclusive
+                },
+                {
+                    type: "Literal",
+                    value: node.toInclusive
+                }
+            ],
+            optional: false
+        };
+    }
+
+    protected transformForInStatement(
+        node: ForInStatementNode
+    ): ESTree.ForOfStatement {
+        return {
+            type: "ForOfStatement",
+            body: this.transformStatement(node.body) as ESTree.Statement,
+            await: false,
+            left: this.transformVariableDeclaration(node.variable),
+            right: this.transformExpression(node.iterable)
+        };
+    }
+
+    protected transformWhileStatement(
+        node: WhileStatementNode
+    ): ESTree.WhileStatement {
+        return {
+            type: "WhileStatement",
+            test: this.transformExpression(node.condition),
+            body: this.transformStatement(node.body) as ESTree.Statement
+        };
+    }
+
     protected transformIfStatement(node: IfStatementNode): ESTree.IfStatement {
         return {
             type: "IfStatement",
@@ -136,7 +217,7 @@ class Transformer {
     protected transformMatchExpression(
         node: MatchExpressionNode
     ): ESTree.Expression {
-        const subjectVarName = this.random("_subject");
+        const subjectVarName = this.randomSymbolName("_subject");
         const body: ESTree.Statement[] = [];
         const equalCaseStack: MatchExpressionCaseNode[] = [];
 

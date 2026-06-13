@@ -48,7 +48,11 @@ class SemanticAnalyzer {
 
         sourceNode.walk({
             [NodeType.VariableDeclaration]: node => {
-                if (node.kind !== VariableDeclarationKind.Let && !node.value) {
+                if (
+                    node.kind !== VariableDeclarationKind.Let &&
+                    !node.value &&
+                    !node.inline
+                ) {
                     diagnostics.push({
                         message: `'${node.identifier.symbol}' must be initialized`,
                         code: DiagnosticCode.InitializationRequired,
@@ -60,7 +64,8 @@ class SemanticAnalyzer {
                 if (
                     node.kind === VariableDeclarationKind.Let &&
                     !node.value &&
-                    !node.annotatedType
+                    !node.annotatedType &&
+                    !node.inline
                 ) {
                     diagnostics.push({
                         message: `Not enough information to infer type of '${node.identifier.symbol}'`,
@@ -118,7 +123,7 @@ class SemanticAnalyzer {
                     kind: node.kind,
                     isInitialized: !!node.value,
                     isAssigned: false,
-                    hits: -1,
+                    hits: node.inline ? 1 : -1,
                     node
                 });
             },

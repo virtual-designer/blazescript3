@@ -12,7 +12,11 @@ enum NodeType {
     BlockStatement,
     ExpressionStatement,
     ForStatement,
+    ForInStatement,
     EmptyStatement,
+    WhileStatement,
+    DoStatement,
+    RangeExpression,
 }
 
 export default NodeType;

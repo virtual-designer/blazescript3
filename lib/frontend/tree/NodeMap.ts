@@ -3,6 +3,7 @@ import BlockStatementNode from "./BlockStatementNode.ts";
 import CallExpressionNode from "./CallExpressionNode.ts";
 import EmptyStatementNode from "./EmptyStatementNode.ts";
 import ExpressionStatementNode from "./ExpressionStatementNode.ts";
+import ForInStatementNode from "./ForInStatementNode.ts";
 import ForStatementNode from "./ForStatementNode.ts";
 import IdentifierNode from "./IdentifierNode.ts";
 import IfStatementNode from "./IfStatementNode.ts";
@@ -10,9 +11,11 @@ import LiteralNode from "./LiteralNode.ts";
 import MatchExpressionCaseNode from "./MatchExpressionCaseNode.ts";
 import MatchExpressionNode from "./MatchExpressionNode.ts";
 import NodeType from "./NodeType.ts";
+import RangeExpressionNode from "./RangeExpressionNode.ts";
 import RootNode from "./RootNode.ts";
 import UnaryExpressionNode from "./UnaryExpressionNode.ts";
 import VariableDeclarationNode from "./VariableDeclarationNode.ts";
+import WhileStatementNode from "./WhileStatementNode.ts";
 
 export const NodeMap = {
     [NodeType.Root]: RootNode,
@@ -29,6 +32,9 @@ export const NodeMap = {
     [NodeType.ExpressionStatement]: ExpressionStatementNode,
     [NodeType.ForStatement]: ForStatementNode,
     [NodeType.EmptyStatement]: EmptyStatementNode,
+    [NodeType.WhileStatement]: WhileStatementNode,
+    [NodeType.ForInStatement]: ForInStatementNode,
+    [NodeType.RangeExpression]: RangeExpressionNode,
 } as const;
 
 export type NodeMapType = {

@@ -12,6 +12,7 @@ import CallExpressionNode from "../tree/CallExpressionNode.ts";
 import EmptyStatementNode from "../tree/EmptyStatementNode.ts";
 import type ExpressionNode from "../tree/ExpressionNode.ts";
 import ExpressionStatementNode from "../tree/ExpressionStatementNode.ts";
+import ForInStatementNode from "../tree/ForInStatementNode.ts";
 import ForStatementNode from "../tree/ForStatementNode.ts";
 import IdentifierNode from "../tree/IdentifierNode.ts";
 import IfStatementNode from "../tree/IfStatementNode.ts";
@@ -23,12 +24,14 @@ import MatchExpressionCaseNode, {
 } from "../tree/MatchExpressionCaseNode.ts";
 import MatchExpressionNode from "../tree/MatchExpressionNode.ts";
 import NodeType from "../tree/NodeType.ts";
+import RangeExpressionNode from "../tree/RangeExpressionNode.ts";
 import RootNode from "../tree/RootNode.ts";
 import { UnaryExpressionKind } from "../tree/UnaryExpressionKind.ts";
 import UnaryExpressionNode from "../tree/UnaryExpressionNode.ts";
 import UnaryOperator from "../tree/UnaryOperator.ts";
 import VariableDeclarationKind from "../tree/VariableDeclarationKind.ts";
 import VariableDeclarationNode from "../tree/VariableDeclarationNode.ts";
+import WhileStatementNode from "../tree/WhileStatementNode.ts";
 import ParserError from "./ParserError.ts";
 
 type ParserContext = {
@@ -51,6 +54,8 @@ class Parser {
     protected readonly noSemicolonStatementTypes = [
         NodeType.IfStatement,
         NodeType.ForStatement,
+        NodeType.ForInStatement,
+        NodeType.WhileStatement,
         NodeType.EmptyStatement
     ];
 
@@ -511,7 +516,7 @@ class Parser {
     protected parseComparisonExpression(
         context: ParserContext
     ): ExpressionNode {
-        let left: ExpressionNode = this.parseAdditiveExpression(context);
+        let left: ExpressionNode = this.parseRangeExpression(context);
 
         while (
             !context.isEOF() &&
@@ -525,7 +530,7 @@ class Parser {
                 ];
 
             context.consume();
-            const right = this.parseAdditiveExpression(context);
+            const right = this.parseRangeExpression(context);
 
             left = new BinaryExpressionNode(
                 operator,
@@ -643,7 +648,11 @@ class Parser {
         return this.parseTypeBinaryExpression(context);
     }
 
-    protected parseVariableDeclaration(context: ParserContext): BaseNode {
+    protected parseVariableDeclaration(
+        context: ParserContext,
+        parseInit = true,
+        inline = false,
+    ): VariableDeclarationNode {
         const keywordToken = context.expect([
             TokenType.Let,
             TokenType.Const,
@@ -658,7 +667,7 @@ class Parser {
             annotatedType = this.parseTypeExpression(context);
         }
 
-        if (context.peek()?.type === TokenType.Equal) {
+        if (context.peek()?.type === TokenType.Equal && parseInit) {
             context.consume();
             value = this.parseExpression(context);
         }
@@ -672,6 +681,7 @@ class Parser {
             new IdentifierNode(identifier.value, identifier.location),
             annotatedType,
             value,
+            inline,
             this.combineLocations(
                 keywordToken,
                 value ?? annotatedType ?? identifier
@@ -726,6 +736,80 @@ class Parser {
             mutator,
             body,
             this.combineLocations(forToken, body)
+        );
+    }
+
+    protected parseForInStatement(context: ParserContext): BaseNode {
+        const forToken = context.expect([TokenType.For]);
+        context.expect([TokenType.ParenthesisOpen]);
+        const variable = this.parseVariableDeclaration(context, false, true);
+        context.expect([TokenType.In]);
+        const expression = this.parseExpression(context);
+        context.expect([TokenType.ParenthesisClose]);
+        const body =
+            context.peek()?.type === TokenType.BraceOpen
+                ? this.parseBlockStatement(context)
+                : this.parseStatement(context);
+
+        return new ForInStatementNode(
+            variable,
+            expression,
+            body,
+            this.combineLocations(forToken, body)
+        );
+    }
+
+    protected parseWhileStatement(context: ParserContext): BaseNode {
+        const whileToken = context.expect([TokenType.While]);
+        context.expect([TokenType.ParenthesisOpen]);
+        const condition = this.parseExpression(context);
+        context.expect([TokenType.ParenthesisClose]);
+        const body =
+            context.peek()?.type === TokenType.BraceOpen
+                ? this.parseBlockStatement(context)
+                : this.parseStatement(context);
+
+        return new WhileStatementNode(
+            condition,
+            body,
+            this.combineLocations(whileToken, body)
+        );
+    }
+
+    protected parseRangeExpression(context: ParserContext): ExpressionNode {
+        const left = this.parseAdditiveExpression(context);
+
+        if (
+            context.peek()?.type !== TokenType.DotDot &&
+            (context.peek()?.type !== TokenType.Not ||
+                context.peek(1)?.type !== TokenType.DotDot)
+        ) {
+            return left;
+        }
+
+        let leftInclusive = true,
+            rightInclusive = true;
+
+        const token = context.expect([TokenType.DotDot, TokenType.Not]);
+
+        if (token?.type === TokenType.Not) {
+            leftInclusive = false;
+            context.expect([TokenType.DotDot]);
+        }
+
+        if (context.peek()?.type === TokenType.Not) {
+            rightInclusive = false;
+            context.consume();
+        }
+
+        const right = this.parseAdditiveExpression(context);
+
+        return new RangeExpressionNode(
+            left,
+            right,
+            leftInclusive,
+            rightInclusive,
+            this.combineLocations(left, right)
         );
     }
 
@@ -797,7 +881,18 @@ class Parser {
                 break;
 
             case TokenType.For:
-                node = this.parseForStatement(context);
+                node = (
+                    [TokenType.Let, TokenType.Final, TokenType.Const] as (
+                        | TokenType
+                        | undefined
+                    )[]
+                ).includes(context.peek(2)?.type)
+                    ? this.parseForInStatement(context)
+                    : this.parseForStatement(context);
+                break;
+
+            case TokenType.While:
+                node = this.parseWhileStatement(context);
                 break;
 
             case TokenType.BraceOpen:
