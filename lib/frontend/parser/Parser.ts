@@ -914,7 +914,9 @@ class Parser {
 
         if (semicolon && !this.noSemicolonStatementTypes.includes(node.type)) {
             context.expect([TokenType.Semicolon]);
+        }
 
+        if (semicolon) {
             while (
                 !context.isEOF() &&
                 context.peek()?.type === TokenType.Semicolon
