@@ -1,5 +1,7 @@
-import BaseNode from "./BaseNode.ts";
+import AbstractNode from "./AbstractNode.ts";
 
-abstract class ExpressionNode extends BaseNode {}
+abstract class ExpressionNode extends AbstractNode {
+    //
+}
 
 export default ExpressionNode;

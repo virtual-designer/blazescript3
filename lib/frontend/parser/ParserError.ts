@@ -1,14 +1,14 @@
-import BaseNode from "../tree/BaseNode.ts";
+import AbstractNode from "../tree/AbstractNode.ts";
 import type { Location } from "../tree/Location.ts";
 
 class ParserError extends Error {
-    public readonly node?: BaseNode;
+    public readonly node?: AbstractNode;
     public readonly location: Location;
 
-    public constructor(message: string, nodeOrLocation: BaseNode | Location) {
+    public constructor(message: string, nodeOrLocation: AbstractNode | Location) {
         super(message);
         
-        if (nodeOrLocation instanceof BaseNode) {
+        if (nodeOrLocation instanceof AbstractNode) {
             this.node = nodeOrLocation;
             this.location = nodeOrLocation.location;
         }

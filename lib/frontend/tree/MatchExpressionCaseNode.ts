@@ -1,8 +1,9 @@
-import BaseNode from "./BaseNode.ts";
+import AbstractNode from "./AbstractNode.ts";
 import type { ComparisonOperator } from "./BinaryOperator.ts";
 import type ExpressionNode from "./ExpressionNode.ts";
 import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
+import StatementNode from "./StatementNode.ts";
 
 export enum MatchExpressionCaseKind {
     Default,
@@ -10,7 +11,7 @@ export enum MatchExpressionCaseKind {
     Pattern
 }
 
-class MatchExpressionCaseNode extends BaseNode {
+class MatchExpressionCaseNode extends StatementNode {
     public override readonly type = NodeType.MatchExpressionCase;
     public readonly kind: MatchExpressionCaseKind;
     public readonly comparisonOperator: ComparisonOperator | null;
@@ -34,7 +35,7 @@ class MatchExpressionCaseNode extends BaseNode {
         this.condition = condition;
     }
 
-    public override branches(): BaseNode[] {
+    public override branches(): AbstractNode[] {
         return [
             ...super.branches(),
             this.body,

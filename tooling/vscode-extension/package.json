@@ -1,0 +1,41 @@
+{
+    "name": "blazescript",
+    "displayName": "BlazeScript Language Support",
+    "description": "Language support extension for The BlazeScript Programming Language",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.120.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Themes"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "blazescript",
+                "aliases": [
+                    "BlazeScript",
+                    "blazescript"
+                ],
+                "extensions": [
+                    ".bl",
+                    ".blz",
+                    ".blaze"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "blazescript",
+                "scopeName": "source.blaze",
+                "path": "./syntaxes/blazescript.tmLanguage.json"
+            }
+        ]
+    },
+    "devDependencies": {
+        "@vscode/vsce": "^3.9.2",
+        "prettier": "^3.8.4"
+    }
+}

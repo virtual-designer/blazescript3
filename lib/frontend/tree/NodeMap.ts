@@ -5,6 +5,8 @@ import EmptyStatementNode from "./EmptyStatementNode.ts";
 import ExpressionStatementNode from "./ExpressionStatementNode.ts";
 import ForInStatementNode from "./ForInStatementNode.ts";
 import ForStatementNode from "./ForStatementNode.ts";
+import FunctionDeclarationNode from "./FunctionDeclarationNode.ts";
+import FunctionParameterDeclarationNode from "./FunctionParameterDeclarationNode.ts";
 import IdentifierNode from "./IdentifierNode.ts";
 import IfStatementNode from "./IfStatementNode.ts";
 import LiteralNode from "./LiteralNode.ts";
@@ -35,6 +37,8 @@ export const NodeMap = {
     [NodeType.WhileStatement]: WhileStatementNode,
     [NodeType.ForInStatement]: ForInStatementNode,
     [NodeType.RangeExpression]: RangeExpressionNode,
+    [NodeType.FunctionDeclaration]: FunctionDeclarationNode,
+    [NodeType.FunctionParameterDeclaration]: FunctionParameterDeclarationNode
 } as const;
 
 export type NodeMapType = {

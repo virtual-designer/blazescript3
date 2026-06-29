@@ -1,7 +1,7 @@
 import Token from "../lexer/Token.ts";
 import TokenType from "../lexer/TokenType.ts";
+import type AbstractNode from "../tree/AbstractNode.ts";
 import AssignmentExpressionNode from "../tree/AssignmentExpressionNode.ts";
-import type BaseNode from "../tree/BaseNode.ts";
 import BinaryExpressionNode from "../tree/BinaryExpressionNode.ts";
 import BinaryOperator, {
     type AssignmentOperator,
@@ -9,6 +9,7 @@ import BinaryOperator, {
 } from "../tree/BinaryOperator.ts";
 import BlockStatementNode from "../tree/BlockStatementNode.ts";
 import CallExpressionNode from "../tree/CallExpressionNode.ts";
+import type DeclarationNode from "../tree/DeclarationNode.ts";
 import EmptyStatementNode from "../tree/EmptyStatementNode.ts";
 import type ExpressionNode from "../tree/ExpressionNode.ts";
 import ExpressionStatementNode from "../tree/ExpressionStatementNode.ts";
@@ -49,7 +50,7 @@ type ParserContext = {
 
 type ErrorOptions = {
     message: string;
-    nodes?: (BaseNode | Token)[];
+    nodes?: (AbstractNode | Token)[];
     location?: Location;
 };
 
@@ -60,7 +61,7 @@ class Parser {
         NodeType.ForInStatement,
         NodeType.WhileStatement,
         NodeType.EmptyStatement,
-        NodeType.FunctionDeclaration,
+        NodeType.FunctionDeclaration
     ];
 
     protected readonly assignmentOperatorMap = {
@@ -104,7 +105,7 @@ class Parser {
     }
 
     protected combineLocations(
-        ...nodes: (BaseNode | Token | null | undefined)[]
+        ...nodes: (AbstractNode | Token | null | undefined)[]
     ): Location {
         let start = [
             Number.POSITIVE_INFINITY,
@@ -728,7 +729,7 @@ class Parser {
 
         context.expect([TokenType.BraceOpen]);
 
-        const body: BaseNode[] = [];
+        const body: AbstractNode[] = [];
 
         while (
             !context.isEOF() &&
@@ -789,7 +790,7 @@ class Parser {
         );
     }
 
-    protected parseBlockStatement(context: ParserContext): BaseNode {
+    protected parseBlockStatement(context: ParserContext): AbstractNode {
         const braceOpenToken = context.expect([TokenType.BraceOpen]);
         const statements = [];
 
@@ -808,7 +809,7 @@ class Parser {
         );
     }
 
-    protected parseForStatement(context: ParserContext): BaseNode {
+    protected parseForStatement(context: ParserContext): AbstractNode {
         const forToken = context.expect([TokenType.For]);
         context.expect([TokenType.ParenthesisOpen]);
         const init =
@@ -839,7 +840,7 @@ class Parser {
         );
     }
 
-    protected parseForInStatement(context: ParserContext): BaseNode {
+    protected parseForInStatement(context: ParserContext): AbstractNode {
         const forToken = context.expect([TokenType.For]);
         context.expect([TokenType.ParenthesisOpen]);
         const variable = this.parseVariableDeclaration(context, false, true);
@@ -859,7 +860,7 @@ class Parser {
         );
     }
 
-    protected parseWhileStatement(context: ParserContext): BaseNode {
+    protected parseWhileStatement(context: ParserContext): AbstractNode {
         const whileToken = context.expect([TokenType.While]);
         context.expect([TokenType.ParenthesisOpen]);
         const condition = this.parseExpression(context);
@@ -913,14 +914,14 @@ class Parser {
         );
     }
 
-    protected parseIfStatement(context: ParserContext): BaseNode {
+    protected parseIfStatement(context: ParserContext): AbstractNode {
         const ifToken = context.expect([TokenType.If]);
         context.expect([TokenType.ParenthesisOpen]);
         const condition = this.parseExpression(context);
         context.expect([TokenType.ParenthesisClose]);
 
-        let thenBlock: BaseNode;
-        let elseBlock: BaseNode | null = null;
+        let thenBlock: AbstractNode;
+        let elseBlock: AbstractNode | null = null;
 
         if (context.peek()?.type === TokenType.BraceOpen) {
             thenBlock = this.parseBlockStatement(context);
@@ -950,7 +951,7 @@ class Parser {
         );
     }
 
-    protected parseEmptyStatement(context: ParserContext): BaseNode {
+    protected parseEmptyStatement(context: ParserContext): AbstractNode {
         const token = context.expect([TokenType.Semicolon]);
 
         while (
@@ -963,11 +964,32 @@ class Parser {
         return new EmptyStatementNode(token.location);
     }
 
-    protected parseStatement(
+    protected trimSemicolons(
+        context: ParserContext,
+        semicolon: boolean = false,
+        node?: AbstractNode
+    ) {
+        if (
+            semicolon &&
+            node &&
+            !this.noSemicolonStatementTypes.includes(node.type)
+        ) {
+            context.expect([TokenType.Semicolon]);
+        }
+
+        while (
+            !context.isEOF() &&
+            context.peek()?.type === TokenType.Semicolon
+        ) {
+            context.consume();
+        }
+    }
+
+    protected parseDeclaration(
         context: ParserContext,
         semicolon = true
-    ): BaseNode {
-        let node: BaseNode;
+    ): DeclarationNode | null {
+        let node: DeclarationNode;
 
         switch (context.peek()?.type) {
             case TokenType.Let:
@@ -980,6 +1002,28 @@ class Parser {
                 node = this.parseFunctionDeclaration(context);
                 break;
 
+            default:
+                return null;
+        }
+
+        this.trimSemicolons(context, semicolon, node);
+        return node;
+    }
+
+    protected parseStatement(
+        context: ParserContext,
+        semicolon = true
+    ): AbstractNode {
+        let node: AbstractNode | null = this.parseDeclaration(
+            context,
+            semicolon
+        );
+
+        if (node) {
+            return node;
+        }
+
+        switch (context.peek()?.type) {
             case TokenType.If:
                 node = this.parseIfStatement(context);
                 break;
@@ -1016,19 +1060,7 @@ class Parser {
                 break;
         }
 
-        if (semicolon && !this.noSemicolonStatementTypes.includes(node.type)) {
-            context.expect([TokenType.Semicolon]);
-        }
-
-        if (semicolon) {
-            while (
-                !context.isEOF() &&
-                context.peek()?.type === TokenType.Semicolon
-            ) {
-                context.consume();
-            }
-        }
-
+        this.trimSemicolons(context, semicolon, node);
         return node;
     }
 }

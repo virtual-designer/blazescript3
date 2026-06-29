@@ -2,7 +2,7 @@ import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
 import type { TreeWalker } from "./TreeWalker.ts";
 
-abstract class BaseNode {
+abstract class AbstractNode {
     public abstract readonly type: NodeType;
     public readonly location: Location;
 
@@ -10,15 +10,15 @@ abstract class BaseNode {
         this.location = location;
     }
 
-    public branches(): (BaseNode | null | undefined)[] {
+    public branches(): (AbstractNode | null | undefined)[] {
         return [];
     }
 
-    public filteredBranches(): BaseNode[] {
+    public filteredBranches(): AbstractNode[] {
         return this.branches().filter(b => !!b);
     }
 
-    public traverse(callback: (node: BaseNode) => boolean) {
+    public traverse(callback: (node: AbstractNode) => boolean) {
         if (!callback(this)) {
             return;
         }
@@ -51,4 +51,4 @@ abstract class BaseNode {
     }
 }
 
-export default BaseNode;
+export default AbstractNode;

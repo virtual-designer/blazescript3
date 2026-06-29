@@ -15,10 +15,9 @@ enum NodeType {
     ForInStatement,
     EmptyStatement,
     WhileStatement,
-    DoStatement,
     RangeExpression,
     FunctionDeclaration,
-    FunctionParameterDeclaration,
+    FunctionParameterDeclaration
 }
 
 export default NodeType;

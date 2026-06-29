@@ -1,17 +1,22 @@
-import BaseNode from "./BaseNode.ts";
+import DeclarationNode from "./DeclarationNode.ts";
 import type ExpressionNode from "./ExpressionNode.ts";
 import type IdentifierNode from "./IdentifierNode.ts";
 import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
 import type { TypeExpressionNode } from "./TypeExpressionNode.ts";
 
-class FunctionParameterDeclarationNode extends BaseNode {
+class FunctionParameterDeclarationNode extends DeclarationNode {
     public override readonly type = NodeType.FunctionParameterDeclaration;
     public readonly identifier: IdentifierNode;
     public readonly annotatedType?: TypeExpressionNode;
     public readonly defaultValue?: ExpressionNode;
 
-    public constructor(identifier: IdentifierNode, annotatedType: TypeExpressionNode | undefined, defaultValue: ExpressionNode | undefined, location: Location) {
+    public constructor(
+        identifier: IdentifierNode,
+        annotatedType: TypeExpressionNode | undefined,
+        defaultValue: ExpressionNode | undefined,
+        location: Location
+    ) {
         super(location);
         this.identifier = identifier;
         this.annotatedType = annotatedType;

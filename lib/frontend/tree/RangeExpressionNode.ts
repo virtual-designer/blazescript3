@@ -1,9 +1,9 @@
-import BaseNode from "./BaseNode.ts";
-import type ExpressionNode from "./ExpressionNode.ts";
+import AbstractNode from "./AbstractNode.ts";
+import ExpressionNode from "./ExpressionNode.ts";
 import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
 
-class RangeExpressionNode extends BaseNode {
+class RangeExpressionNode extends ExpressionNode {
     public override readonly type = NodeType.RangeExpression;
     public readonly from: ExpressionNode;
     public readonly to: ExpressionNode;
@@ -24,7 +24,7 @@ class RangeExpressionNode extends BaseNode {
         this.toInclusive = toInclusive;
     }
 
-    public override branches(): (BaseNode | null | undefined)[] {
+    public override branches(): (AbstractNode | null | undefined)[] {
         return [...super.branches(), this.from, this.to];
     }
 }

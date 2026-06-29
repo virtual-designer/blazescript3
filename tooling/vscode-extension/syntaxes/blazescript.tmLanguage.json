@@ -1,0 +1,287 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "BlazeScript",
+    "patterns": [
+        {
+            "include": "#everything"
+        }
+    ],
+    "repository": {
+        "everything": {
+            "patterns": [
+                {
+                    "include": "#comments"
+                },
+                {
+                    "include": "#keywords"
+                },
+                {
+                    "include": "#statements"
+                },
+                {
+                    "include": "#expression"
+                },
+                {
+                    "include": "#operators"
+                }
+            ]
+        },
+        "comments": {
+            "patterns": [
+                { "include": "#singleLineComment" },
+                { "include": "#docBlockComment" },
+                { "include": "#multiLineComment" }
+            ]
+        },
+        "singleLineComment": {
+            "name": "comment.line.double-slash.blazescript",
+            "match": "\\/\\/.*"
+        },
+        "docBlockComment": {
+            "name": "comment.block.documentation.blazescript",
+            "begin": "\\/\\*\\*",
+            "end": "\\*\\/",
+            "patterns": [{ "match": ".*" }]
+        },
+        "multiLineComment": {
+            "name": "comment.block.blazescript",
+            "begin": "\\/\\*",
+            "end": "\\*\\/",
+            "patterns": [{ "match": ".*" }]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.blazescript",
+                    "match": "\\b(if|else|do|while|for|return|case|switch|match|default)\\b"
+                },
+                {
+                    "name": "keyword.other.blazescript",
+                    "match": "\\b(public|private|protected|internal|async|synchronized|override|static|operator|infix|class|abstract|interface|trait|annotation|sealed|permits|extends|implements|uses|record|enum|object)\\b"
+                },
+                {
+                    "name": "keyword.operator.new.blazescript",
+                    "match": "\\b(=>|in|true|false|null|new)\\b"
+                }
+            ]
+        },
+        "statements": {
+            "patterns": [
+                {
+                    "include": "#decls"
+                }
+            ]
+        },
+        "decls": {
+            "patterns": [
+                { "include": "#variableDeclaration" },
+                { "include": "#functionDeclaration" }
+            ]
+        },
+        "functionDeclaration": {
+            "name": "meta.declaration.function.blazescript",
+            "begin": "(\\b(public|private|protected|internal|async|synchronized|override|static|operator|infix)\\b\\s*)*(\\b(function|constructor)\\b)\\s*",
+            "end": "(?<=\\))(\\s*:\\s*([A-Za-z_$][A-Za-z0-9_$]*))?",
+            "beginCaptures": {
+                "2": {
+                    "name": "keyword.other.declaration.blazescript"
+                },
+                "3": {
+                    "name": "keyword.other.declaration.blazescript"
+                }
+            },
+            "endCaptures": {
+                "2": {
+                    "name": "entity.name.type.blazescript"
+                }
+            },
+            "patterns": [
+                {
+                    "begin": "(\\b([A-Za-z_$][A-Za-z0-9_$]*)\\b\\s*)?\\(",
+                    "end": "(?=\\))",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function.blazescript"
+                        }
+                    },
+                    "endCaptures": {
+                        "2": {
+                            "name": "entity.name.type.blazescript"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "begin": "\\b([A-Za-z_$][A-Za-z0-9_$]*)(\\s*:\\s*([A-Za-z_$][A-Za-z0-9_$]*))?\\s*(=)\\s*",
+                            "end": "(?=,|\\))",
+                            "beginCaptures": {
+                                "1": {
+                                    "name": "variable.name"
+                                },
+                                "3": {
+                                    "name": "entity.name.type.blazescript"
+                                },
+                                "4": {
+                                    "name": "punctuation.operator.blazescript"
+                                }
+                            },
+                            "patterns": [{ "include": "#expression" }]
+                        },
+                        {
+                            "match": "\\b([A-Za-z_$][A-Za-z0-9_$]*)(\\s*:\\s*([A-Za-z_$][A-Za-z0-9_$]*))?(?=,|\\)|$)",
+                            "captures": {
+                                "1": {
+                                    "name": "variable.name"
+                                },
+                                "3": {
+                                    "name": "entity.name.type.blazescript"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "variableDeclaration": {
+            "name": "meta.declaration.variable.blazescript",
+            "begin": "(\\b(public|private|protected|internal|override|static)\\b\\s*)*(\\bfinal|const|let\\b)\\s+",
+            "beginCaptures": {
+                "2": {
+                    "name": "keyword.other.declaration.blazescript"
+                },
+                "3": {
+                    "name": "keyword.other.declaration.blazescript"
+                }
+            },
+            "end": "(?=;)",
+            "patterns": [
+                {
+                    "begin": "\\b([A-Za-z_$][A-Za-z0-9_$]*)(\\s*:\\s*([A-Za-z_$][A-Za-z0-9_$]*))?\\s*(=)\\s*",
+                    "end": "(?=,|;)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "variable.name"
+                        },
+                        "3": {
+                            "name": "entity.name.type.blazescript"
+                        },
+                        "4": {
+                            "name": "punctuation.operator.blazescript"
+                        }
+                    },
+                    "patterns": [{ "include": "#expression" }]
+                },
+                {
+                    "match": "\\b([A-Za-z_$][A-Za-z0-9_$]*)(\\s*:\\s*([A-Za-z_$][A-Za-z0-9_$]*))?(?=,|;|$)",
+                    "captures": {
+                        "1": {
+                            "name": "variable.name"
+                        },
+                        "3": {
+                            "name": "entity.name.type.blazescript"
+                        }
+                    }
+                }
+            ]
+        },
+        "assignment": {
+            "name": "meta.expression.assignment.blazescript",
+            "begin": "\\b([A-Za-z_$][A-Za-z0-9_$]*)\\b\\s*(?==)",
+            "beginCaptures": {
+                "1": {
+                    "name": "variable.name"
+                }
+            },
+            "end": "(?==)"
+        },
+        "literals": {
+            "patterns": [
+                { "include": "#strings" },
+                { "include": "#floats" },
+                { "include": "#integers" },
+                { "include": "#identifiers" }
+            ]
+        },
+        "identifiers": {
+            "name": "variable.name",
+            "match": "\\b([A-Za-z_$][A-Za-z0-9_$]*)\\b"
+        },
+        "integers": {
+            "name": "constant.numeric.int.blazescript",
+            "match": "[+-]?((0x[0-9a-fA-F_]+)|(0b[0-1_]+)|((0o|0)[0-7_]+)|([1-9][0-9_]*)|(0_*))"
+        },
+        "floats": {
+            "name": "constant.numeric.float.blazescript",
+            "match": "[+-]?(([0-9]+\\.[0-9]*)|([0-9]*\\.[0-9]+))"
+        },
+        "pureExpression": {
+            "patterns": [
+                { "include": "#calls" },
+                { "include": "#assignment" },
+                { "include": "#literals" }
+            ]
+        },
+        "expression": {
+            "patterns": [
+                { "include": "#keywords" },
+                { "include": "#pureExpression" },
+                { "include": "#operators" }
+            ]
+        },
+        "operators": {
+            "patterns": [
+                {
+                    "name": "punctuation.operator.blazescript",
+                    "match": "([+-\\\\*/%|&~^=\\\\!><|])"
+                },
+                {
+                    "name": "punctuation.operator.range.blazescript",
+                    "match": "[(\\.\\.)]"
+                }
+            ]
+        },
+        "calls": {
+            "patterns": [
+                {
+                    "name": "meta.expression.call.blazescript",
+                    "begin": "\\b([A-Za-z_$][A-Za-z0-9_$]*)\\s*(\\()",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function"
+                        },
+                        "2": {
+                            "name": "punctuation.parens.open"
+                        }
+                    },
+                    "end": "\\)",
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.parens.end"
+                        }
+                    },
+                    "patterns": [{ "include": "#expression" }]
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.blazescript",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.blazescript",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.blazescript",
+                    "begin": "'",
+                    "end": "'"
+                }
+            ]
+        }
+    },
+    "scopeName": "source.blaze"
+}

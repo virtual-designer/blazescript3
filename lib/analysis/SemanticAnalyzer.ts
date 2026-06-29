@@ -2,7 +2,7 @@ import chalk from "chalk";
 import type { Diagnostic } from "../diagnostic/Diagnostic.ts";
 import { DiagnosticCode } from "../diagnostic/DiagnosticCode.ts";
 import { DiagnosticLevel } from "../diagnostic/DiagnosticLevel.ts";
-import type BaseNode from "../frontend/tree/BaseNode.ts";
+import type AbstractNode from "../frontend/tree/AbstractNode.ts";
 import NodeType from "../frontend/tree/NodeType.ts";
 import VariableDeclarationKind from "../frontend/tree/VariableDeclarationKind.ts";
 import type VariableDeclarationNode from "../frontend/tree/VariableDeclarationNode.ts";
@@ -36,7 +36,7 @@ class SemanticAnalyzer {
         }
     }
 
-    public analyze(sourceNode: BaseNode): Diagnostic[] {
+    public analyze(sourceNode: AbstractNode): Diagnostic[] {
         const globalScope: SyntheticScope = {
             symbolTable: new Map(),
             parent: null,

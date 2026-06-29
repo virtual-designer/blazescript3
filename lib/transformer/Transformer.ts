@@ -1,4 +1,4 @@
-import type BaseNode from "../frontend/tree/BaseNode.ts";
+import type AbstractNode from "../frontend/tree/AbstractNode.ts";
 import type IdentifierNode from "../frontend/tree/IdentifierNode.ts";
 import type LiteralNode from "../frontend/tree/LiteralNode.ts";
 import NodeType from "../frontend/tree/NodeType.ts";
@@ -34,7 +34,7 @@ class Transformer {
         return `t${prefix}${rand}${suffix}`;
     }
 
-    public transformStatement(node: BaseNode): ESTree.BaseNode {
+    public transformStatement(node: AbstractNode): ESTree.BaseNode {
         switch (node.type) {
             case NodeType.Root:
                 return this.transformRoot(node as RootNode);
@@ -79,7 +79,7 @@ class Transformer {
         }
     }
 
-    public transformExpression(node: BaseNode): ESTree.Expression {
+    public transformExpression(node: AbstractNode): ESTree.Expression {
         switch (node.type) {
             case NodeType.Literal:
                 return this.transformLiteral(node as LiteralNode);
@@ -449,7 +449,7 @@ class Transformer {
         };
     }
 
-    protected transformBlockChild(node: BaseNode): ESTree.Statement {
+    protected transformBlockChild(node: AbstractNode): ESTree.Statement {
         const esNode = this.transformStatement(node);
 
         if (node instanceof ExpressionNode) {

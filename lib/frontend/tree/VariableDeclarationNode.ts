@@ -1,4 +1,5 @@
-import BaseNode from "./BaseNode.ts";
+import AbstractNode from "./AbstractNode.ts";
+import DeclarationNode from "./DeclarationNode.ts";
 import type ExpressionNode from "./ExpressionNode.ts";
 import type IdentifierNode from "./IdentifierNode.ts";
 import type { Location } from "./Location.ts";
@@ -6,7 +7,7 @@ import NodeType from "./NodeType.ts";
 import type { TypeExpressionNode } from "./TypeExpressionNode.ts";
 import type VariableDeclarationKind from "./VariableDeclarationKind.ts";
 
-class VariableDeclarationNode extends BaseNode {
+class VariableDeclarationNode extends DeclarationNode {
     public override readonly type = NodeType.VariableDeclaration;
     public readonly kind: VariableDeclarationKind;
     public readonly identifier: IdentifierNode;
@@ -30,7 +31,7 @@ class VariableDeclarationNode extends BaseNode {
         this.value = value;
     }
 
-    public override branches(): BaseNode[] {
+    public override branches(): AbstractNode[] {
         return [
             ...super.branches(),
             this.identifier,

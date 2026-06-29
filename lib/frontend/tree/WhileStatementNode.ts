@@ -1,16 +1,17 @@
-import BaseNode from "./BaseNode.ts";
+import AbstractNode from "./AbstractNode.ts";
 import type ExpressionNode from "./ExpressionNode.ts";
 import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
+import StatementNode from "./StatementNode.ts";
 
-class WhileStatementNode extends BaseNode {
+class WhileStatementNode extends StatementNode {
     public override readonly type = NodeType.WhileStatement;
     public readonly condition: ExpressionNode;
-    public readonly body: BaseNode;
+    public readonly body: AbstractNode;
 
     public constructor(
         condition: ExpressionNode,
-        body: BaseNode,
+        body: AbstractNode,
         location: Location
     ) {
         super(location);
@@ -18,12 +19,8 @@ class WhileStatementNode extends BaseNode {
         this.body = body;
     }
 
-    public override branches(): (BaseNode | null | undefined)[] {
-        return [
-            ...super.branches(),
-            this.condition,
-            this.body
-        ];
+    public override branches(): (AbstractNode | null | undefined)[] {
+        return [...super.branches(), this.condition, this.body];
     }
 }
 

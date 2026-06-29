@@ -6,5 +6,10 @@
         "codegen"
     ],
     "js/ts.tsdk.path": "node_modules/typescript/lib",
-    "js/ts.experimental.useTsgo": true
+    "js/ts.experimental.useTsgo": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "always",
+        "source.removeUnusedImports": "always",
+    },
+    "editor.formatOnSave": true,
 }

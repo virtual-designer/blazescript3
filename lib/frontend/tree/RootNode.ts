@@ -1,7 +1,7 @@
 import NodeType from "./NodeType.ts";
-import BaseNodeWithChildren from "./BaseNodeWithChildren.ts";
+import StatementNodeWithChildren from "./StatementNodeWithChildren.ts";
 
-class RootNode extends BaseNodeWithChildren {
+class RootNode extends StatementNodeWithChildren {
     public override readonly type = NodeType.Root;
 }
 

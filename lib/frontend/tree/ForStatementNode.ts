@@ -1,20 +1,21 @@
-import BaseNode from "./BaseNode.ts";
+import AbstractNode from "./AbstractNode.ts";
 import type ExpressionNode from "./ExpressionNode.ts";
 import type { Location } from "./Location.ts";
 import NodeType from "./NodeType.ts";
+import StatementNode from "./StatementNode.ts";
 
-class ForStatementNode extends BaseNode {
+class ForStatementNode extends StatementNode {
     public override readonly type = NodeType.ForStatement;
-    public readonly init: BaseNode | null;
+    public readonly init: AbstractNode | null;
     public readonly condition: ExpressionNode | null;
     public readonly mutator: ExpressionNode | null;
-    public readonly body: BaseNode;
+    public readonly body: AbstractNode;
 
     public constructor(
-        init: BaseNode | null,
+        init: AbstractNode | null,
         condition: ExpressionNode | null,
         mutator: ExpressionNode | null,
-        body: BaseNode,
+        body: AbstractNode,
         location: Location
     ) {
         super(location);
@@ -24,7 +25,7 @@ class ForStatementNode extends BaseNode {
         this.body = body;
     }
 
-    public override branches(): (BaseNode | null | undefined)[] {
+    public override branches(): (AbstractNode | null | undefined)[] {
         return [
             ...super.branches(),
             this.init,
