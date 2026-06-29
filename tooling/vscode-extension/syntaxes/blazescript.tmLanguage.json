@@ -69,6 +69,31 @@
             "patterns": [
                 {
                     "include": "#decls"
+                },
+                {
+                    "include": "#import"
+                }
+            ]
+        },
+        "import": {
+            "begin": "\\b(import)\\b\\s*",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.other.blazescript"
+                }
+            },
+            "end": ";",
+            "patterns": [
+                {
+                    "match": "(([A-Za-z_$][A-Za-z0-9_$]*)\\.)?(([A-Za-z_$][A-Za-z0-9_$]*))",
+                    "captures": {
+                        "2": {
+                            "name": "variable.name.blazescript"
+                        },
+                        "4": {
+                            "name": "variable.name.blazescript"
+                        }
+                    }
                 }
             ]
         },
