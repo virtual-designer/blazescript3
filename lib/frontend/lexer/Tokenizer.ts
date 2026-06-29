@@ -53,7 +53,12 @@ class Tokenizer {
         for: TokenType.For,
         while: TokenType.While,
         do: TokenType.Do,
-        in: TokenType.In
+        in: TokenType.In,
+        function: TokenType.Function,
+        public: TokenType.Public,
+        private: TokenType.Private,
+        protected: TokenType.Protected,
+        internal: TokenType.Internal,
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);

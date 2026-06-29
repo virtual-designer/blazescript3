@@ -24,6 +24,7 @@ import { UnaryExpressionKind } from "../frontend/tree/UnaryExpressionKind.ts";
 import type WhileStatementNode from "../frontend/tree/WhileStatementNode.ts";
 import type ForInStatementNode from "../frontend/tree/ForInStatementNode.ts";
 import type RangeExpressionNode from "../frontend/tree/RangeExpressionNode.ts";
+import type FunctionDeclarationNode from "../frontend/tree/FunctionDeclarationNode.ts";
 
 class Transformer {
     private readonly BLAZE_GLOBAL_SYMBOL = "__blaze";
@@ -41,6 +42,11 @@ class Transformer {
             case NodeType.VariableDeclaration:
                 return this.transformVariableDeclaration(
                     node as VariableDeclarationNode
+                );
+
+            case NodeType.FunctionDeclaration:
+                return this.transformFunctionDeclaration(
+                    node as FunctionDeclarationNode
                 );
 
             case NodeType.IfStatement:
@@ -344,6 +350,31 @@ class Transformer {
             callee: this.transformExpression(node.callee),
             arguments: node.args.map(arg => this.transformExpression(arg)),
             optional: false
+        };
+    }
+
+    protected transformFunctionDeclaration(
+        node: FunctionDeclarationNode
+    ): ESTree.FunctionDeclaration {
+        return {
+            type: "FunctionDeclaration",
+            body: {
+                type: 'BlockStatement',
+                body: node.body.map(node => this.transformStatement(node) as ESTree.Statement)
+            },
+            id: this.transformIdentifier(node.identifier),
+            params: node.parameters.map(
+                p =>
+                    (p.defaultValue
+                        ? {
+                              type: "AssignmentPattern",
+                              left: this.transformIdentifier(p.identifier),
+                              right: this.transformExpression(p.defaultValue)
+                          }
+                        : this.transformIdentifier(
+                              p.identifier
+                          )) satisfies ESTree.FunctionDeclaration["params"][number]
+            )
         };
     }
 

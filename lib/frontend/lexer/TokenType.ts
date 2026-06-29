@@ -47,6 +47,11 @@ enum TokenType {
     PlusPlus,
     MinusMinus,
     DotDot,
+    Function,
+    Public,
+    Private,
+    Protected,
+    Internal,
 }
 
 export default TokenType;
