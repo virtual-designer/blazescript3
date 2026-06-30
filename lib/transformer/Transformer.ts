@@ -1,30 +1,31 @@
-import type AbstractNode from "../frontend/tree/AbstractNode.ts";
-import type IdentifierNode from "../frontend/tree/IdentifierNode.ts";
-import type LiteralNode from "../frontend/tree/LiteralNode.ts";
-import NodeType from "../frontend/tree/NodeType.ts";
-import type RootNode from "../frontend/tree/RootNode.ts";
 import ESTree from "estree";
-import type VariableDeclarationNode from "../frontend/tree/VariableDeclarationNode.ts";
-import VariableDeclarationKind from "../frontend/tree/VariableDeclarationKind.ts";
+import type AbstractNode from "../frontend/tree/AbstractNode.ts";
+import { AccessModifier } from "../frontend/tree/AccessModifier.ts";
 import type BinaryExpressionNode from "../frontend/tree/BinaryExpressionNode.ts";
-import type UnaryExpressionNode from "../frontend/tree/UnaryExpressionNode.ts";
 import BinaryOperator, {
     AssignmentOperators
 } from "../frontend/tree/BinaryOperator.ts";
-import ExpressionNode from "../frontend/tree/ExpressionNode.ts";
+import type BlockStatementNode from "../frontend/tree/BlockStatementNode.ts";
 import type CallExpressionNode from "../frontend/tree/CallExpressionNode.ts";
-import type MatchExpressionNode from "../frontend/tree/MatchExpressionNode.ts";
+import ExpressionNode from "../frontend/tree/ExpressionNode.ts";
+import ExpressionStatementNode from "../frontend/tree/ExpressionStatementNode.ts";
+import type ForInStatementNode from "../frontend/tree/ForInStatementNode.ts";
+import type ForStatementNode from "../frontend/tree/ForStatementNode.ts";
+import type FunctionDeclarationNode from "../frontend/tree/FunctionDeclarationNode.ts";
+import type IdentifierNode from "../frontend/tree/IdentifierNode.ts";
+import type IfStatementNode from "../frontend/tree/IfStatementNode.ts";
+import type LiteralNode from "../frontend/tree/LiteralNode.ts";
 import type MatchExpressionCaseNode from "../frontend/tree/MatchExpressionCaseNode.ts";
 import { MatchExpressionCaseKind } from "../frontend/tree/MatchExpressionCaseNode.ts";
-import type IfStatementNode from "../frontend/tree/IfStatementNode.ts";
-import type BlockStatementNode from "../frontend/tree/BlockStatementNode.ts";
-import ExpressionStatementNode from "../frontend/tree/ExpressionStatementNode.ts";
-import type ForStatementNode from "../frontend/tree/ForStatementNode.ts";
-import { UnaryExpressionKind } from "../frontend/tree/UnaryExpressionKind.ts";
-import type WhileStatementNode from "../frontend/tree/WhileStatementNode.ts";
-import type ForInStatementNode from "../frontend/tree/ForInStatementNode.ts";
+import type MatchExpressionNode from "../frontend/tree/MatchExpressionNode.ts";
+import NodeType from "../frontend/tree/NodeType.ts";
 import type RangeExpressionNode from "../frontend/tree/RangeExpressionNode.ts";
-import type FunctionDeclarationNode from "../frontend/tree/FunctionDeclarationNode.ts";
+import type RootNode from "../frontend/tree/RootNode.ts";
+import { UnaryExpressionKind } from "../frontend/tree/UnaryExpressionKind.ts";
+import type UnaryExpressionNode from "../frontend/tree/UnaryExpressionNode.ts";
+import VariableDeclarationKind from "../frontend/tree/VariableDeclarationKind.ts";
+import type VariableDeclarationNode from "../frontend/tree/VariableDeclarationNode.ts";
+import type WhileStatementNode from "../frontend/tree/WhileStatementNode.ts";
 
 class Transformer {
     private readonly BLAZE_GLOBAL_SYMBOL = "__blaze";
@@ -192,7 +193,9 @@ class Transformer {
             type: "ForOfStatement",
             body: this.transformStatement(node.body) as ESTree.Statement,
             await: false,
-            left: this.transformVariableDeclaration(node.variable),
+            left: this.transformVariableDeclaration(
+                node.variable
+            ) as ESTree.VariableDeclaration,
             right: this.transformExpression(node.iterable)
         };
     }
@@ -355,12 +358,14 @@ class Transformer {
 
     protected transformFunctionDeclaration(
         node: FunctionDeclarationNode
-    ): ESTree.FunctionDeclaration {
-        return {
+    ): ESTree.FunctionDeclaration | ESTree.ExportNamedDeclaration {
+        const functionDeclaration: ESTree.FunctionDeclaration = {
             type: "FunctionDeclaration",
             body: {
-                type: 'BlockStatement',
-                body: node.body.map(node => this.transformStatement(node) as ESTree.Statement)
+                type: "BlockStatement",
+                body: node.body.map(
+                    node => this.transformStatement(node) as ESTree.Statement
+                )
             },
             id: this.transformIdentifier(node.identifier),
             params: node.parameters.map(
@@ -376,12 +381,18 @@ class Transformer {
                           )) satisfies ESTree.FunctionDeclaration["params"][number]
             )
         };
+
+        if (node.accessModifier !== AccessModifier.Private) {
+            return this.exportDeclaration(functionDeclaration);
+        }
+
+        return functionDeclaration;
     }
 
     protected transformVariableDeclaration(
         node: VariableDeclarationNode
-    ): ESTree.VariableDeclaration {
-        return {
+    ): ESTree.VariableDeclaration | ESTree.ExportNamedDeclaration {
+        const variableDeclaration: ESTree.VariableDeclaration = {
             type: "VariableDeclaration",
             kind: node.kind === VariableDeclarationKind.Let ? "let" : "const",
             declarations: [
@@ -395,6 +406,23 @@ class Transformer {
                         : undefined
                 }
             ]
+        };
+
+        if (node.accessModifier !== AccessModifier.Private) {
+            return this.exportDeclaration(variableDeclaration);
+        }
+
+        return variableDeclaration;
+    }
+
+    protected exportDeclaration(
+        node: ESTree.Declaration
+    ): ESTree.ExportNamedDeclaration {
+        return {
+            type: "ExportNamedDeclaration",
+            declaration: node,
+            specifiers: [],
+            attributes: []
         };
     }
 

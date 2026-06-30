@@ -1,4 +1,5 @@
 import AbstractNode from "./AbstractNode.ts";
+import type { AccessModifier } from "./AccessModifier.ts";
 import DeclarationNode from "./DeclarationNode.ts";
 import type ExpressionNode from "./ExpressionNode.ts";
 import type IdentifierNode from "./IdentifierNode.ts";
@@ -12,6 +13,7 @@ class VariableDeclarationNode extends DeclarationNode {
     public readonly kind: VariableDeclarationKind;
     public readonly identifier: IdentifierNode;
     public readonly annotatedType?: TypeExpressionNode;
+    public readonly accessModifier: AccessModifier;
     public readonly value?: ExpressionNode;
     public readonly inline: boolean;
 
@@ -19,6 +21,7 @@ class VariableDeclarationNode extends DeclarationNode {
         kind: VariableDeclarationKind,
         identifier: IdentifierNode,
         annotatedType: TypeExpressionNode | undefined,
+        accessModifier: AccessModifier,
         value: ExpressionNode | undefined,
         inline = false,
         location: Location
@@ -27,6 +30,7 @@ class VariableDeclarationNode extends DeclarationNode {
         this.kind = kind;
         this.identifier = identifier;
         this.annotatedType = annotatedType;
+        this.accessModifier = accessModifier;
         this.inline = inline;
         this.value = value;
     }

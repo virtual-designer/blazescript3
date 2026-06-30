@@ -1,6 +1,7 @@
 import Token from "../lexer/Token.ts";
 import TokenType from "../lexer/TokenType.ts";
 import type AbstractNode from "../tree/AbstractNode.ts";
+import { AccessModifier } from "../tree/AccessModifier.ts";
 import AssignmentExpressionNode from "../tree/AssignmentExpressionNode.ts";
 import BinaryExpressionNode from "../tree/BinaryExpressionNode.ts";
 import BinaryOperator, {
@@ -42,6 +43,7 @@ type ParserContext = {
     tokens: Token[];
     index: number;
     tokenCount: number;
+    tokenStack: Token[];
     isEOF(): boolean;
     peek(index?: number): Token | null;
     consume(): Token | null;
@@ -55,6 +57,15 @@ type ErrorOptions = {
 };
 
 class Parser {
+    protected readonly accessModifierTokens = [
+        TokenType.Public,
+        TokenType.Private,
+        TokenType.Protected,
+        TokenType.Internal
+    ];
+
+    protected readonly modifierTokens = [...this.accessModifierTokens];
+
     protected readonly noSemicolonStatementTypes = [
         NodeType.IfStatement,
         NodeType.ForStatement,
@@ -151,6 +162,7 @@ class Parser {
             tokens: tokenArray,
             index: 0,
             tokenCount: tokenArray.length,
+            tokenStack: [],
             isEOF: (): boolean =>
                 context.index >= context.tokenCount ||
                 context.peek()?.type === TokenType.EOF,
@@ -669,9 +681,46 @@ class Parser {
         return this.parseTypeBinaryExpression(context);
     }
 
+    protected parseDeclarationAccessModifiers(
+        context: ParserContext,
+        defaultValue = AccessModifier.Private
+    ) {
+        let accessModifier: AccessModifier | null = null;
+
+        for (const token of context.tokenStack) {
+            if (this.accessModifierTokens.includes(token.type)) {
+                if (accessModifier) {
+                    throw new ParserError(
+                        "Multiple access modifiers in a single declaration",
+                        token.location
+                    );
+                }
+
+                accessModifier =
+                    token.type === TokenType.Public
+                        ? AccessModifier.Public
+                        : token.type === TokenType.Protected
+                          ? AccessModifier.Protected
+                          : token.type === TokenType.Internal
+                            ? AccessModifier.Internal
+                            : AccessModifier.Private;
+            } else {
+                throw new ParserError("Unexpected modifier", token.location);
+            }
+        }
+
+        const tokens = [...context.tokenStack];
+        context.tokenStack.length = 0;
+        accessModifier ??= defaultValue;
+
+        return { accessModifier, accessModifierTokens: tokens };
+    }
+
     protected parseFunctionDeclaration(
         context: ParserContext
     ): FunctionDeclarationNode {
+        const { accessModifier, accessModifierTokens } =
+            this.parseDeclarationAccessModifiers(context);
         const token = context.expect([TokenType.Function]);
         const identifier = this.parseIdentifier(context);
         const parameters: FunctionParameterDeclarationNode[] = [];
@@ -744,8 +793,14 @@ class Parser {
             identifier,
             returnType,
             parameters,
+            accessModifier,
             body,
-            this.combineLocations(token, identifier, lastToken)
+            this.combineLocations(
+                ...accessModifierTokens,
+                token,
+                identifier,
+                lastToken
+            )
         );
     }
 
@@ -754,6 +809,8 @@ class Parser {
         parseInit = true,
         inline = false
     ): VariableDeclarationNode {
+        const { accessModifier, accessModifierTokens } =
+            this.parseDeclarationAccessModifiers(context);
         const keywordToken = context.expect([
             TokenType.Let,
             TokenType.Const,
@@ -781,9 +838,11 @@ class Parser {
                   : VariableDeclarationKind.Const,
             new IdentifierNode(identifier.value, identifier.location),
             annotatedType,
+            accessModifier,
             value,
             inline,
             this.combineLocations(
+                ...accessModifierTokens,
                 keywordToken,
                 value ?? annotatedType ?? identifier
             )
@@ -990,6 +1049,14 @@ class Parser {
         semicolon = true
     ): DeclarationNode | null {
         let node: DeclarationNode;
+
+        while (
+            this.modifierTokens.includes(
+                context.peek()?.type as TokenType.Public
+            )
+        ) {
+            context.tokenStack.push(context.consume()!);
+        }
 
         switch (context.peek()?.type) {
             case TokenType.Let:

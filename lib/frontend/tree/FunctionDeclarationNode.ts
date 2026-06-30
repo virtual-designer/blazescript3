@@ -1,4 +1,5 @@
 import AbstractNode from "./AbstractNode.ts";
+import type { AccessModifier } from "./AccessModifier.ts";
 import DeclarationNode from "./DeclarationNode.ts";
 import type FunctionParameterDeclarationNode from "./FunctionParameterDeclarationNode.ts";
 import type IdentifierNode from "./IdentifierNode.ts";
@@ -11,12 +12,14 @@ class FunctionDeclarationNode extends DeclarationNode {
     public readonly identifier: IdentifierNode;
     public readonly returnType?: TypeExpressionNode;
     public readonly parameters: FunctionParameterDeclarationNode[];
+    public readonly accessModifier: AccessModifier;
     public readonly body: AbstractNode[];
 
     public constructor(
         identifier: IdentifierNode,
         returnType: TypeExpressionNode | undefined,
         parameters: FunctionParameterDeclarationNode[],
+        accessModifier: AccessModifier,
         body: AbstractNode[],
         location: Location
     ) {
@@ -24,6 +27,7 @@ class FunctionDeclarationNode extends DeclarationNode {
         this.identifier = identifier;
         this.returnType = returnType;
         this.parameters = parameters;
+        this.accessModifier = accessModifier;
         this.body = body;
     }
 
