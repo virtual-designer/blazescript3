@@ -40,7 +40,11 @@ abstract class AbstractNode {
         }
 
         for (const branch of this.filteredBranches()) {
-            branch.walk(walker);
+            branch.walk({
+                ...walker,
+                _cleanup: undefined,
+                _init: undefined
+            });
         }
 
         walker._cleanup?.(this);

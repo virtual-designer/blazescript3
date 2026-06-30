@@ -9,5 +9,4 @@ export type TreeWalker<B extends AbstractNode> = {
 } & {
     _init?(node: B): TreeWalker<AbstractNode> | void | undefined;
     _cleanup?(node: B): void;
-    __parent?: TreeWalker<AbstractNode>;
 };

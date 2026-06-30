@@ -3,12 +3,12 @@ import type { Diagnostic } from "../diagnostic/Diagnostic.ts";
 import { DiagnosticCode } from "../diagnostic/DiagnosticCode.ts";
 import { DiagnosticLevel } from "../diagnostic/DiagnosticLevel.ts";
 import type AbstractNode from "../frontend/tree/AbstractNode.ts";
-import NodeType from "../frontend/tree/NodeType.ts";
-import VariableDeclarationKind from "../frontend/tree/VariableDeclarationKind.ts";
-import type VariableDeclarationNode from "../frontend/tree/VariableDeclarationNode.ts";
-import TypeUtils from "../types/TypeUtils.ts";
 import IdentifierNode from "../frontend/tree/IdentifierNode.ts";
+import NodeType from "../frontend/tree/NodeType.ts";
 import UnaryOperator from "../frontend/tree/UnaryOperator.ts";
+import VariableDeclarationKind from "../frontend/tree/VariableDeclarationKind.ts";
+import VariableDeclarationNode from "../frontend/tree/VariableDeclarationNode.ts";
+import TypeUtils from "../types/TypeUtils.ts";
 
 type SyntheticSymbolDefinition = {
     kind: VariableDeclarationKind;
@@ -21,7 +21,7 @@ type SyntheticSymbolDefinition = {
 type SyntheticScope = {
     symbolTable: Map<string, SyntheticSymbolDefinition>;
     parent: SyntheticScope | null;
-    children: SyntheticScope[];
+    children: Set<SyntheticScope>;
 };
 
 class SemanticAnalyzer {
@@ -40,7 +40,7 @@ class SemanticAnalyzer {
         const globalScope: SyntheticScope = {
             symbolTable: new Map(),
             parent: null,
-            children: []
+            children: new Set()
         };
 
         let scope = globalScope;
@@ -119,6 +119,15 @@ class SemanticAnalyzer {
                     return;
                 }
 
+                if (scope.parent !== null && node.accessModifier !== null) {
+                    diagnostics.push({
+                        message: `Modifiers are not allowed for block-scoped identifier '${node.identifier.symbol}'`,
+                        code: DiagnosticCode.ModifierNotAllowed,
+                        level: DiagnosticLevel.Error,
+                        location: node.location
+                    });
+                }
+
                 scope.symbolTable.set(node.identifier.symbol, {
                     kind: node.kind,
                     isInitialized: !!node.value,
@@ -168,6 +177,49 @@ class SemanticAnalyzer {
                         symbol.isAssigned = true;
                     }
                 }
+            },
+            [NodeType.ForInStatement]: node => {
+                if (node.variable.accessModifier !== null) {
+                    diagnostics.push({
+                        message: `Modifiers are not allowed for '${node.variable.identifier.symbol}'`,
+                        code: DiagnosticCode.ModifierNotAllowed,
+                        level: DiagnosticLevel.Error,
+                        location: node.variable.location
+                    });
+                }
+            },
+            [NodeType.ForStatement]: node => {
+                if (
+                    node.init instanceof VariableDeclarationNode &&
+                    node.init.accessModifier !== null
+                ) {
+                    diagnostics.push({
+                        message: `Modifiers are not allowed for '${node.init.identifier.symbol}'`,
+                        code: DiagnosticCode.ModifierNotAllowed,
+                        level: DiagnosticLevel.Error,
+                        location: node.init.location
+                    });
+                }
+            },
+            [NodeType.BlockStatement]: _ => {
+                scope = {
+                    symbolTable: new Map(),
+                    parent: scope,
+                    children: new Set()
+                };
+
+                scope.parent?.children.add(scope);
+
+                return {
+                    _cleanup: node => {
+                        console.log(node);
+                        scope.parent?.children.delete(scope);
+
+                        if (scope.parent) {
+                            scope = scope.parent;
+                        }
+                    }
+                };
             }
         });
 

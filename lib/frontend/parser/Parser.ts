@@ -694,12 +694,12 @@ class Parser {
         return this.parseTypeBinaryExpression(context);
     }
 
-    protected parseDeclarationAccessModifiers(
-        context: ParserContext,
-        defaultValue = AccessModifier.Private
-    ) {
+    protected parseDeclarationAccessModifiers(context: ParserContext) {
         let accessModifier: AccessModifier | null = null;
         let modifierToken: Token | null = null;
+
+        this.bufferModifiers(context);
+
         for (const token of context.tokenStack) {
             if (this.accessModifierTokens.includes(token.type)) {
                 if (modifierToken) {
@@ -758,7 +758,6 @@ class Parser {
 
         const tokens = [...context.tokenStack];
         context.tokenStack.length = 0;
-        accessModifier ??= defaultValue;
 
         return { accessModifier, accessModifierTokens: tokens };
     }
@@ -918,6 +917,16 @@ class Parser {
     protected parseForStatement(context: ParserContext): AbstractNode {
         const forToken = context.expect([TokenType.For]);
         context.expect([TokenType.ParenthesisOpen]);
+
+        const index = context.index;
+        const variable = this.parseVariableDeclaration(context, false, true);
+
+        if (context.peek()?.type === TokenType.In) {
+            return this.parseForInStatement(context, forToken, variable);
+        }
+
+        context.index = index;
+
         const init =
             context.peek()?.type === TokenType.Semicolon
                 ? null
@@ -946,10 +955,11 @@ class Parser {
         );
     }
 
-    protected parseForInStatement(context: ParserContext): AbstractNode {
-        const forToken = context.expect([TokenType.For]);
-        context.expect([TokenType.ParenthesisOpen]);
-        const variable = this.parseVariableDeclaration(context, false, true);
+    protected parseForInStatement(
+        context: ParserContext,
+        forToken: Token,
+        variable: VariableDeclarationNode
+    ): AbstractNode {
         context.expect([TokenType.In]);
         const expression = this.parseExpression(context);
         context.expect([TokenType.ParenthesisClose]);
@@ -1083,11 +1093,23 @@ class Parser {
             context.expect([TokenType.Semicolon]);
         }
 
+        if (semicolon) {
+            while (
+                !context.isEOF() &&
+                context.peek()?.type === TokenType.Semicolon
+            ) {
+                context.consume();
+            }
+        }
+    }
+
+    protected bufferModifiers(context: ParserContext) {
         while (
-            !context.isEOF() &&
-            context.peek()?.type === TokenType.Semicolon
+            this.modifierTokens.includes(
+                context.peek()?.type as TokenType.Public
+            )
         ) {
-            context.consume();
+            context.tokenStack.push(context.consume()!);
         }
     }
 
@@ -1097,13 +1119,7 @@ class Parser {
     ): DeclarationNode | null {
         let node: DeclarationNode;
 
-        while (
-            this.modifierTokens.includes(
-                context.peek()?.type as TokenType.Public
-            )
-        ) {
-            context.tokenStack.push(context.consume()!);
-        }
+        this.bufferModifiers(context);
 
         switch (context.peek()?.type) {
             case TokenType.Let:
@@ -1143,14 +1159,7 @@ class Parser {
                 break;
 
             case TokenType.For:
-                node = (
-                    [TokenType.Let, TokenType.Final, TokenType.Const] as (
-                        | TokenType
-                        | undefined
-                    )[]
-                ).includes(context.peek(2)?.type)
-                    ? this.parseForInStatement(context)
-                    : this.parseForStatement(context);
+                node = this.parseForStatement(context);
                 break;
 
             case TokenType.While:

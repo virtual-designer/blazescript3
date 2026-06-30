@@ -7,5 +7,6 @@ export enum DiagnosticCode {
     ReadonlyVariable,
     UnableToInferType,
     InvalidUnaryExpressionOperand,
-    ConflictingAccessModifiers
+    ConflictingAccessModifiers,
+    ModifierNotAllowed
 }

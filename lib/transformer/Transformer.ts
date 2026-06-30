@@ -382,7 +382,10 @@ class Transformer {
             )
         };
 
-        if (node.accessModifier !== AccessModifier.Private) {
+        if (
+            node.accessModifier &&
+            node.accessModifier !== AccessModifier.Private
+        ) {
             return this.exportDeclaration(functionDeclaration);
         }
 
@@ -408,7 +411,10 @@ class Transformer {
             ]
         };
 
-        if (node.accessModifier !== AccessModifier.Private) {
+        if (
+            node.accessModifier &&
+            node.accessModifier !== AccessModifier.Private
+        ) {
             return this.exportDeclaration(variableDeclaration);
         }
 

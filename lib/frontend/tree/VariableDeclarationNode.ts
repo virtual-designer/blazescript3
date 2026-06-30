@@ -13,7 +13,7 @@ class VariableDeclarationNode extends DeclarationNode {
     public readonly kind: VariableDeclarationKind;
     public readonly identifier: IdentifierNode;
     public readonly annotatedType?: TypeExpressionNode;
-    public readonly accessModifier: AccessModifier;
+    public readonly accessModifier: AccessModifier | null;
     public readonly value?: ExpressionNode;
     public readonly inline: boolean;
 
@@ -21,7 +21,7 @@ class VariableDeclarationNode extends DeclarationNode {
         kind: VariableDeclarationKind,
         identifier: IdentifierNode,
         annotatedType: TypeExpressionNode | undefined,
-        accessModifier: AccessModifier,
+        accessModifier: AccessModifier | null,
         value: ExpressionNode | undefined,
         inline = false,
         location: Location

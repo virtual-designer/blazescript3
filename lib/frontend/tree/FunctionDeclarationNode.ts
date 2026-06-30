@@ -12,14 +12,14 @@ class FunctionDeclarationNode extends DeclarationNode {
     public readonly identifier: IdentifierNode;
     public readonly returnType?: TypeExpressionNode;
     public readonly parameters: FunctionParameterDeclarationNode[];
-    public readonly accessModifier: AccessModifier;
+    public readonly accessModifier: AccessModifier | null;
     public readonly body: AbstractNode[];
 
     public constructor(
         identifier: IdentifierNode,
         returnType: TypeExpressionNode | undefined,
         parameters: FunctionParameterDeclarationNode[],
-        accessModifier: AccessModifier,
+        accessModifier: AccessModifier | null,
         body: AbstractNode[],
         location: Location
     ) {
