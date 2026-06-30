@@ -59,6 +59,11 @@ class Tokenizer {
         private: TokenType.Private,
         protected: TokenType.Protected,
         internal: TokenType.Internal,
+        async: TokenType.Async,
+        override: TokenType.Override,
+        operator: TokenType.Operator,
+        await: TokenType.Await,
+        return: TokenType.Return
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);

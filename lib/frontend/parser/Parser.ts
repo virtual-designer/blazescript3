@@ -6,6 +6,7 @@ import TokenType from "../lexer/TokenType.ts";
 import type AbstractNode from "../tree/AbstractNode.ts";
 import { AccessModifier } from "../tree/AccessModifier.ts";
 import AssignmentExpressionNode from "../tree/AssignmentExpressionNode.ts";
+import AwaitExpressionNode from "../tree/AwaitExpressionNode.ts";
 import BinaryExpressionNode from "../tree/BinaryExpressionNode.ts";
 import BinaryOperator, {
     type AssignmentOperator,
@@ -19,6 +20,7 @@ import type ExpressionNode from "../tree/ExpressionNode.ts";
 import ExpressionStatementNode from "../tree/ExpressionStatementNode.ts";
 import ForInStatementNode from "../tree/ForInStatementNode.ts";
 import ForStatementNode from "../tree/ForStatementNode.ts";
+import { FunctionDeclarationModifier } from "../tree/FunctionDeclarationModifier.ts";
 import FunctionDeclarationNode from "../tree/FunctionDeclarationNode.ts";
 import FunctionParameterDeclarationNode from "../tree/FunctionParameterDeclarationNode.ts";
 import IdentifierNode from "../tree/IdentifierNode.ts";
@@ -32,6 +34,7 @@ import MatchExpressionCaseNode, {
 import MatchExpressionNode from "../tree/MatchExpressionNode.ts";
 import NodeType from "../tree/NodeType.ts";
 import RangeExpressionNode from "../tree/RangeExpressionNode.ts";
+import ReturnStatementNode from "../tree/ReturnStatementNode.ts";
 import RootNode from "../tree/RootNode.ts";
 import type { TypeExpressionNode } from "../tree/TypeExpressionNode.ts";
 import { UnaryExpressionKind } from "../tree/UnaryExpressionKind.ts";
@@ -51,6 +54,7 @@ type ParserContext = {
     peek(index?: number): Token | null;
     consume(): Token | null;
     expect(types?: TokenType[]): Token;
+    assertStackEmpty(message?: string): void;
 };
 
 type ErrorOptions = {
@@ -67,7 +71,12 @@ class Parser {
         TokenType.Internal
     ];
 
-    protected readonly modifierTokens = [...this.accessModifierTokens];
+    protected readonly functionModifierTokens = [TokenType.Async];
+
+    protected readonly modifierTokens = [
+        ...this.accessModifierTokens,
+        ...this.functionModifierTokens
+    ];
 
     protected readonly noSemicolonStatementTypes = [
         NodeType.IfStatement,
@@ -120,7 +129,7 @@ class Parser {
         );
     }
 
-    protected diagnostic(diagnostic: Diagnostic) {
+    protected diagnostic(diagnostic: Diagnostic): never {
         throw new ParserError("", diagnostic.location, diagnostic);
     }
 
@@ -200,6 +209,15 @@ class Parser {
                 }
 
                 return token;
+            },
+            assertStackEmpty: message => {
+                if (context.tokenStack.length) {
+                    throw new ParserError(
+                        message ??
+                            `Unexpected token: ${context.tokenStack[0]!.value}`,
+                        context.tokenStack[0]!.location
+                    );
+                }
             }
         };
 
@@ -301,10 +319,22 @@ class Parser {
         );
     }
 
+    protected parseAwaitExpression(context: ParserContext): ExpressionNode {
+        const token = context.expect([TokenType.Await]);
+        const operand = this.parseExpression(context);
+        return new AwaitExpressionNode(
+            operand,
+            this.combineLocations(token, operand)
+        );
+    }
+
     protected parsePrimaryExpression(context: ParserContext): ExpressionNode {
         switch (context.peek()?.type) {
             case TokenType.Match:
                 return this.parseMatchExpression(context);
+
+            case TokenType.Await:
+                return this.parseAwaitExpression(context);
 
             case TokenType.ParenthesisOpen:
                 context.consume();
@@ -694,42 +724,92 @@ class Parser {
         return this.parseTypeBinaryExpression(context);
     }
 
+    protected parseFunctionDeclarationModifiers(context: ParserContext) {
+        const modifiersTokens: Record<TokenType, Token> = Object.create(null);
+
+        this.bufferModifiers(context);
+        let index = 0;
+
+        for (const token of context.tokenStack) {
+            if (this.functionModifierTokens.includes(token.type)) {
+                if (token.type in modifiersTokens) {
+                    const isConflicting =
+                        modifiersTokens[token.type].value !== token.value;
+
+                    this.diagnostic({
+                        code: DiagnosticCode.ConflictingAccessModifiers,
+                        level: DiagnosticLevel.Error,
+                        message: `${isConflicting ? "Conflicting" : "Duplicate"} modifier '${token.value}'`,
+                        location: token.location
+                    });
+                }
+
+                modifiersTokens[token.type] = token;
+                context.tokenStack.splice(index, 1);
+            }
+
+            index++;
+        }
+
+        let modifiers: FunctionDeclarationModifier =
+            FunctionDeclarationModifier.None;
+
+        for (const key in modifiersTokens) {
+            switch (+key) {
+                case TokenType.Async:
+                    modifiers |= FunctionDeclarationModifier.Async;
+                    break;
+
+                default:
+                    throw new Error("Invalid state");
+            }
+        }
+
+        return {
+            functionModifiers: modifiers,
+            functionModifierTokens: Object.values(modifiersTokens)
+        };
+    }
+
     protected parseDeclarationAccessModifiers(context: ParserContext) {
         let accessModifier: AccessModifier | null = null;
-        let modifierToken: Token | null = null;
+        let accessModifierToken: Token | null = null;
 
         this.bufferModifiers(context);
 
+        let index = 0;
+        const tokens = [];
+
         for (const token of context.tokenStack) {
             if (this.accessModifierTokens.includes(token.type)) {
-                if (modifierToken) {
+                if (accessModifierToken) {
                     if (
                         token.location.start[0] !==
-                        modifierToken.location.start[0]
+                        accessModifierToken.location.start[0]
                     ) {
                         this.pushDiagnostic({
                             code: DiagnosticCode.ConflictingAccessModifiers,
                             level: DiagnosticLevel.Note,
                             message: "Previous modifier applied here",
-                            location: modifierToken.location
+                            location: accessModifierToken.location
                         });
                     }
 
                     this.diagnostic({
                         code: DiagnosticCode.ConflictingAccessModifiers,
                         level: DiagnosticLevel.Error,
-                        message: `Conflicting access modifier '${token.value}'`,
+                        message: `${token.value === accessModifierToken.value ? "Duplicate" : "Conflicting"} access modifier '${token.value}'`,
                         location: token.location,
                         suggestions: [
                             ...(token.location.start[0] ===
-                            modifierToken.location.start[0]
+                            accessModifierToken.location.start[0]
                                 ? [
                                       {
                                           message:
                                               "Previous modifier applied here",
                                           columnOffset:
-                                              modifierToken.location.start[1] -
-                                              1
+                                              accessModifierToken.location
+                                                  .start[1] - 1
                                       }
                                   ]
                                 : []),
@@ -742,7 +822,7 @@ class Parser {
                     });
                 }
 
-                modifierToken = token;
+                accessModifierToken = token;
                 accessModifier =
                     token.type === TokenType.Public
                         ? AccessModifier.Public
@@ -751,13 +831,13 @@ class Parser {
                           : token.type === TokenType.Internal
                             ? AccessModifier.Internal
                             : AccessModifier.Private;
-            } else {
-                throw new ParserError("Unexpected modifier", token.location);
-            }
-        }
 
-        const tokens = [...context.tokenStack];
-        context.tokenStack.length = 0;
+                tokens.push(token);
+                context.tokenStack.splice(index, 1);
+            }
+
+            index++;
+        }
 
         return { accessModifier, accessModifierTokens: tokens };
     }
@@ -767,6 +847,11 @@ class Parser {
     ): FunctionDeclarationNode {
         const { accessModifier, accessModifierTokens } =
             this.parseDeclarationAccessModifiers(context);
+        const { functionModifiers, functionModifierTokens } =
+            this.parseFunctionDeclarationModifiers(context);
+
+        context.assertStackEmpty();
+
         const token = context.expect([TokenType.Function]);
         const identifier = this.parseIdentifier(context);
         const parameters: FunctionParameterDeclarationNode[] = [];
@@ -822,30 +907,21 @@ class Parser {
             returnType = this.parseTypeExpression(context);
         }
 
-        context.expect([TokenType.BraceOpen]);
-
-        const body: AbstractNode[] = [];
-
-        while (
-            !context.isEOF() &&
-            context.peek()?.type !== TokenType.BraceClose
-        ) {
-            body.push(this.parseStatement(context));
-        }
-
-        const lastToken = context.expect([TokenType.BraceClose]);
+        const body = this.parseBlockStatement(context);
 
         return new FunctionDeclarationNode(
             identifier,
             returnType,
             parameters,
             accessModifier,
+            functionModifiers,
             body,
             this.combineLocations(
                 ...accessModifierTokens,
+                ...functionModifierTokens,
                 token,
                 identifier,
-                lastToken
+                body
             )
         );
     }
@@ -857,6 +933,9 @@ class Parser {
     ): VariableDeclarationNode {
         const { accessModifier, accessModifierTokens } =
             this.parseDeclarationAccessModifiers(context);
+
+        context.assertStackEmpty();
+
         const keywordToken = context.expect([
             TokenType.Let,
             TokenType.Const,
@@ -895,7 +974,19 @@ class Parser {
         );
     }
 
-    protected parseBlockStatement(context: ParserContext): AbstractNode {
+    protected parseReturnStatement(context: ParserContext): AbstractNode {
+        const token = context.expect([TokenType.Return]);
+        const expression =
+            !context.isEOF() && context.peek()?.type !== TokenType.Semicolon
+                ? this.parseExpression(context)
+                : null;
+        return new ReturnStatementNode(
+            expression,
+            this.combineLocations(token, expression)
+        );
+    }
+
+    protected parseBlockStatement(context: ParserContext): BlockStatementNode {
         const braceOpenToken = context.expect([TokenType.BraceOpen]);
         const statements = [];
 
@@ -1164,6 +1255,10 @@ class Parser {
 
             case TokenType.While:
                 node = this.parseWhileStatement(context);
+                break;
+
+            case TokenType.Return:
+                node = this.parseReturnStatement(context);
                 break;
 
             case TokenType.BraceOpen:

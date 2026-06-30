@@ -1,3 +1,4 @@
+import AwaitExpressionNode from "./AwaitExpressionNode.ts";
 import BinaryExpressionNode from "./BinaryExpressionNode.ts";
 import BlockStatementNode from "./BlockStatementNode.ts";
 import CallExpressionNode from "./CallExpressionNode.ts";
@@ -14,6 +15,7 @@ import MatchExpressionCaseNode from "./MatchExpressionCaseNode.ts";
 import MatchExpressionNode from "./MatchExpressionNode.ts";
 import NodeType from "./NodeType.ts";
 import RangeExpressionNode from "./RangeExpressionNode.ts";
+import ReturnStatementNode from "./ReturnStatementNode.ts";
 import RootNode from "./RootNode.ts";
 import UnaryExpressionNode from "./UnaryExpressionNode.ts";
 import VariableDeclarationNode from "./VariableDeclarationNode.ts";
@@ -38,7 +40,9 @@ export const NodeMap = {
     [NodeType.ForInStatement]: ForInStatementNode,
     [NodeType.RangeExpression]: RangeExpressionNode,
     [NodeType.FunctionDeclaration]: FunctionDeclarationNode,
-    [NodeType.FunctionParameterDeclaration]: FunctionParameterDeclarationNode
+    [NodeType.FunctionParameterDeclaration]: FunctionParameterDeclarationNode,
+    [NodeType.AwaitExpression]: AwaitExpressionNode,
+    [NodeType.ReturnStatement]: ReturnStatementNode
 } as const;
 
 export type NodeMapType = {

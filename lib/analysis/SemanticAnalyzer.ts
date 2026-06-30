@@ -43,6 +43,7 @@ class SemanticAnalyzer {
             children: new Set()
         };
 
+        let functionScopeDepth = 0;
         let scope = globalScope;
         const diagnostics: Diagnostic[] = [];
 
@@ -211,8 +212,7 @@ class SemanticAnalyzer {
                 scope.parent?.children.add(scope);
 
                 return {
-                    _cleanup: node => {
-                        console.log(node);
+                    _cleanup: _ => {
                         scope.parent?.children.delete(scope);
 
                         if (scope.parent) {
@@ -220,6 +220,25 @@ class SemanticAnalyzer {
                         }
                     }
                 };
+            },
+            [NodeType.FunctionDeclaration]: _ => {
+                functionScopeDepth++;
+
+                return {
+                    _cleanup: _ => {
+                        functionScopeDepth--;
+                    }
+                };
+            },
+            [NodeType.ReturnStatement]: node => {
+                if (functionScopeDepth < 1) {
+                    diagnostics.push({
+                        message: `Cannot return outside a function`,
+                        code: DiagnosticCode.InvalidReturn,
+                        level: DiagnosticLevel.Error,
+                        location: node.location
+                    });
+                }
             }
         });
 

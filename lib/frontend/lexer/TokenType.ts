@@ -52,6 +52,11 @@ enum TokenType {
     Private,
     Protected,
     Internal,
+    Async,
+    Override,
+    Operator,
+    Await,
+    Return
 }
 
 export default TokenType;

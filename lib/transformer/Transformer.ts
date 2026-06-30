@@ -1,6 +1,7 @@
 import ESTree from "estree";
 import type AbstractNode from "../frontend/tree/AbstractNode.ts";
 import { AccessModifier } from "../frontend/tree/AccessModifier.ts";
+import type AwaitExpressionNode from "../frontend/tree/AwaitExpressionNode.ts";
 import type BinaryExpressionNode from "../frontend/tree/BinaryExpressionNode.ts";
 import BinaryOperator, {
     AssignmentOperators
@@ -11,6 +12,7 @@ import ExpressionNode from "../frontend/tree/ExpressionNode.ts";
 import ExpressionStatementNode from "../frontend/tree/ExpressionStatementNode.ts";
 import type ForInStatementNode from "../frontend/tree/ForInStatementNode.ts";
 import type ForStatementNode from "../frontend/tree/ForStatementNode.ts";
+import { FunctionDeclarationModifier } from "../frontend/tree/FunctionDeclarationModifier.ts";
 import type FunctionDeclarationNode from "../frontend/tree/FunctionDeclarationNode.ts";
 import type IdentifierNode from "../frontend/tree/IdentifierNode.ts";
 import type IfStatementNode from "../frontend/tree/IfStatementNode.ts";
@@ -20,6 +22,7 @@ import { MatchExpressionCaseKind } from "../frontend/tree/MatchExpressionCaseNod
 import type MatchExpressionNode from "../frontend/tree/MatchExpressionNode.ts";
 import NodeType from "../frontend/tree/NodeType.ts";
 import type RangeExpressionNode from "../frontend/tree/RangeExpressionNode.ts";
+import type ReturnStatementNode from "../frontend/tree/ReturnStatementNode.ts";
 import type RootNode from "../frontend/tree/RootNode.ts";
 import { UnaryExpressionKind } from "../frontend/tree/UnaryExpressionKind.ts";
 import type UnaryExpressionNode from "../frontend/tree/UnaryExpressionNode.ts";
@@ -64,6 +67,11 @@ class Transformer {
 
             case NodeType.BlockStatement:
                 return this.transformBlockStatement(node as BlockStatementNode);
+
+            case NodeType.ReturnStatement:
+                return this.transformReturnStatement(
+                    node as ReturnStatementNode
+                );
 
             case NodeType.EmptyStatement:
                 return { type: "EmptyStatement" };
@@ -111,9 +119,25 @@ class Transformer {
                     node as RangeExpressionNode
                 );
 
+            case NodeType.AwaitExpression:
+                return this.transformAwaitExpression(
+                    node as AwaitExpressionNode
+                );
+
             default:
                 throw new Error(`Unsupported node: ${node}`);
         }
+    }
+
+    protected transformReturnStatement(
+        node: ReturnStatementNode
+    ): ESTree.ReturnStatement {
+        return {
+            type: "ReturnStatement",
+            argument: node.value
+                ? this.transformExpression(node.value)
+                : undefined
+        };
     }
 
     protected transformBlockStatement(
@@ -220,6 +244,15 @@ class Transformer {
             alternate: node.elseBlock
                 ? (this.transformStatement(node.elseBlock) as ESTree.Statement)
                 : undefined
+        };
+    }
+
+    protected transformAwaitExpression(
+        node: AwaitExpressionNode
+    ): ESTree.AwaitExpression {
+        return {
+            type: "AwaitExpression",
+            argument: this.transformExpression(node.operand)
         };
     }
 
@@ -361,12 +394,7 @@ class Transformer {
     ): ESTree.FunctionDeclaration | ESTree.ExportNamedDeclaration {
         const functionDeclaration: ESTree.FunctionDeclaration = {
             type: "FunctionDeclaration",
-            body: {
-                type: "BlockStatement",
-                body: node.body.map(
-                    node => this.transformStatement(node) as ESTree.Statement
-                )
-            },
+            body: this.transformBlockStatement(node.body),
             id: this.transformIdentifier(node.identifier),
             params: node.parameters.map(
                 p =>
@@ -379,7 +407,10 @@ class Transformer {
                         : this.transformIdentifier(
                               p.identifier
                           )) satisfies ESTree.FunctionDeclaration["params"][number]
-            )
+            ),
+            async:
+                (node.functionModifiers & FunctionDeclarationModifier.Async) ===
+                FunctionDeclarationModifier.Async
         };
 
         if (

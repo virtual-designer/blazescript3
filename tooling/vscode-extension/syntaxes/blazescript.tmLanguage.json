@@ -53,7 +53,7 @@
             "patterns": [
                 {
                     "name": "keyword.control.blazescript",
-                    "match": "\\b(if|else|do|while|for|return|case|switch|match|default)\\b"
+                    "match": "\\b(if|else|do|while|for|return|case|switch|match|default|await)\\b"
                 },
                 {
                     "name": "keyword.other.blazescript",
@@ -61,7 +61,7 @@
                 },
                 {
                     "name": "keyword.operator.new.blazescript",
-                    "match": "\\b(=>|in|true|false|null|new)\\b"
+                    "match": "(=>|(\\b(in|true|false|null|new)\\b))"
                 }
             ]
         },

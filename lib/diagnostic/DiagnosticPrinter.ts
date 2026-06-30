@@ -208,7 +208,7 @@ class DiagnosticPrinter {
                 match => `${chalk.blueBright.bold(this.stripANSI(match))}`
             )
             .replaceAll(
-                /if|else|for|while|do|switch|match/g,
+                /if|else|for|while|do|switch|match|case|return/g,
                 match => `${chalk.magentaBright.bold(this.stripANSI(match))}`
             )
             .replaceAll(

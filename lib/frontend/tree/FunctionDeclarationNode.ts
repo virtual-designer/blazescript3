@@ -1,6 +1,7 @@
-import AbstractNode from "./AbstractNode.ts";
 import type { AccessModifier } from "./AccessModifier.ts";
+import type BlockStatementNode from "./BlockStatementNode.ts";
 import DeclarationNode from "./DeclarationNode.ts";
+import { FunctionDeclarationModifier } from "./FunctionDeclarationModifier.ts";
 import type FunctionParameterDeclarationNode from "./FunctionParameterDeclarationNode.ts";
 import type IdentifierNode from "./IdentifierNode.ts";
 import type { Location } from "./Location.ts";
@@ -13,14 +14,16 @@ class FunctionDeclarationNode extends DeclarationNode {
     public readonly returnType?: TypeExpressionNode;
     public readonly parameters: FunctionParameterDeclarationNode[];
     public readonly accessModifier: AccessModifier | null;
-    public readonly body: AbstractNode[];
+    public readonly functionModifiers: FunctionDeclarationModifier;
+    public readonly body: BlockStatementNode;
 
     public constructor(
         identifier: IdentifierNode,
         returnType: TypeExpressionNode | undefined,
         parameters: FunctionParameterDeclarationNode[],
         accessModifier: AccessModifier | null,
-        body: AbstractNode[],
+        functionModifiers: FunctionDeclarationModifier | null,
+        body: BlockStatementNode,
         location: Location
     ) {
         super(location);
@@ -28,6 +31,8 @@ class FunctionDeclarationNode extends DeclarationNode {
         this.returnType = returnType;
         this.parameters = parameters;
         this.accessModifier = accessModifier;
+        this.functionModifiers =
+            functionModifiers ?? FunctionDeclarationModifier.None;
         this.body = body;
     }
 
@@ -37,7 +42,7 @@ class FunctionDeclarationNode extends DeclarationNode {
             this.identifier,
             this.returnType,
             ...this.parameters,
-            ...this.body
+            this.body
         ];
     }
 }

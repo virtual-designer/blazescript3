@@ -8,5 +8,6 @@ export enum DiagnosticCode {
     UnableToInferType,
     InvalidUnaryExpressionOperand,
     ConflictingAccessModifiers,
-    ModifierNotAllowed
+    ModifierNotAllowed,
+    InvalidReturn
 }

@@ -17,7 +17,9 @@ enum NodeType {
     WhileStatement,
     RangeExpression,
     FunctionDeclaration,
-    FunctionParameterDeclaration
+    FunctionParameterDeclaration,
+    AwaitExpression,
+    ReturnStatement
 }
 
 export default NodeType;

@@ -7,9 +7,12 @@
         "vscode": "^1.120.0"
     },
     "categories": [
-        "Programming Languages",
-        "Themes"
+        "Programming Languages"
     ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/virtual-designer/blazescript3"
+    },
     "contributes": {
         "languages": [
             {
@@ -24,7 +27,10 @@
                     ".blaze"
                 ],
                 "configuration": "./language-configuration.json",
-                "mimetypes": ["application/x-blazescript-source", "application/blazescript"],
+                "mimetypes": [
+                    "application/x-blazescript-source",
+                    "application/blazescript"
+                ],
                 "icon": {
                     "light": "./logo.svg",
                     "dark": "./logo.svg"
@@ -42,5 +48,8 @@
     "devDependencies": {
         "@vscode/vsce": "^3.9.2",
         "prettier": "^3.8.4"
+    },
+    "scripts": {
+        "package": "vsce package"
     }
 }
