@@ -23,7 +23,12 @@
                     ".blz",
                     ".blaze"
                 ],
-                "configuration": "./language-configuration.json"
+                "configuration": "./language-configuration.json",
+                "mimetypes": ["application/x-blazescript-source", "application/blazescript"],
+                "icon": {
+                    "light": "./logo.svg",
+                    "dark": "./logo.svg"
+                }
             }
         ],
         "grammars": [
