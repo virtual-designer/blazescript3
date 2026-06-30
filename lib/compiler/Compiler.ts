@@ -1,15 +1,16 @@
 import { readFile, writeFile } from "fs/promises";
-import Tokenizer from "../frontend/lexer/Tokenizer.ts";
-import Parser from "../frontend/parser/Parser.ts";
-import type { CompilerTransaction } from "./CompilerTransaction.ts";
-import type RootNode from "../frontend/tree/RootNode.ts";
-import Transformer from "../transformer/Transformer.ts";
+import SemanticAnalyzer from "../analysis/SemanticAnalyzer.ts";
 import CodeGenerator from "../codegen/CodeGenerator.ts";
-import { isLocatableError } from "../diagnostic/LoctableError.ts";
-import DiagnosticPrinter from "../diagnostic/DiagnosticPrinter.ts";
 import { DiagnosticCode } from "../diagnostic/DiagnosticCode.ts";
 import { DiagnosticLevel } from "../diagnostic/DiagnosticLevel.ts";
-import SemanticAnalyzer from "../analysis/SemanticAnalyzer.ts";
+import DiagnosticPrinter from "../diagnostic/DiagnosticPrinter.ts";
+import { isLocatableError } from "../diagnostic/LoctableError.ts";
+import Tokenizer from "../frontend/lexer/Tokenizer.ts";
+import Parser from "../frontend/parser/Parser.ts";
+import ParserError from "../frontend/parser/ParserError.ts";
+import type RootNode from "../frontend/tree/RootNode.ts";
+import Transformer from "../transformer/Transformer.ts";
+import type { CompilerTransaction } from "./CompilerTransaction.ts";
 
 class Compiler {
     protected readonly tokenizer = new Tokenizer();
@@ -43,12 +44,18 @@ class Compiler {
                 rootNodes.push(rootNode);
             } catch (error) {
                 if (isLocatableError(error)) {
-                    this.diagnosticPrinter.print({
-                        code: DiagnosticCode.SyntaxError,
-                        level: DiagnosticLevel.Error,
-                        location: error.location,
-                        message: error.message
-                    });
+                    this.diagnosticPrinter.print(
+                        error instanceof ParserError && error.diagnostic
+                            ? error.diagnostic
+                            : {
+                                  code: DiagnosticCode.SyntaxError,
+                                  level: DiagnosticLevel.Error,
+                                  location: error.location,
+                                  message: error.message
+                              }
+                    );
+
+                    this.diagnosticPrinter.print(...this.parser.diagnostics);
                 } else {
                     throw error;
                 }

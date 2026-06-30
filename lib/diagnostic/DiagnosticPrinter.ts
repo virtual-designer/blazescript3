@@ -178,7 +178,7 @@ class DiagnosticPrinter {
                 if (barOffsets.includes(computedIndex)) {
                     suggestionPad +=
                         computedIndex === (suggestion.columnOffset ?? 0)
-                            ? chalk.white.bold("|")
+                            ? chalk.white.bold("=>")
                             : chalk.gray.bold("|");
 
                     if (computedIndex === (suggestion.columnOffset ?? 0)) {
@@ -198,10 +198,7 @@ class DiagnosticPrinter {
 
     private highlight(line: string) {
         return line
-            .replaceAll(
-                /[\[\]]/g,
-                match => `${chalk.yellowBright.bold(match)}`
-            )
+            .replaceAll(/[\[\]]/g, match => `${chalk.yellowBright.bold(match)}`)
             .replaceAll(
                 /(\x1b\[\d+(;\d+)*m)?([A-Za-z_$][A-Za-z0-9_$]*)/g,
                 match => `${chalk.whiteBright(this.stripANSI(`${match}`))}`
@@ -218,14 +215,8 @@ class DiagnosticPrinter {
                 /[+\-*/%&|?~=]|(>>)|(<<)/g,
                 match => `${chalk.yellow(match)}`
             )
-            .replaceAll(
-                /[\(\)]/g,
-                match => `${chalk.magenta(match)}`
-            )
-            .replaceAll(
-                /[\{\}]/g,
-                match => `${chalk.whiteBright.bold(match)}`
-            )
+            .replaceAll(/[\(\)]/g, match => `${chalk.magenta(match)}`)
+            .replaceAll(/[\{\}]/g, match => `${chalk.whiteBright.bold(match)}`)
             .replaceAll(/;/g, match => `${chalk.gray(match)}`)
             .replaceAll(/:/g, match => `${chalk.whiteBright.dim(match)}`)
             .replaceAll(

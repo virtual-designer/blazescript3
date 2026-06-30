@@ -1,3 +1,6 @@
+import type { Diagnostic } from "../../diagnostic/Diagnostic.ts";
+import { DiagnosticCode } from "../../diagnostic/DiagnosticCode.ts";
+import { DiagnosticLevel } from "../../diagnostic/DiagnosticLevel.ts";
 import Token from "../lexer/Token.ts";
 import TokenType from "../lexer/TokenType.ts";
 import type AbstractNode from "../tree/AbstractNode.ts";
@@ -106,6 +109,8 @@ class Parser {
         [TokenType.Ampersand]: BinaryOperator.Intersection
     } as const;
 
+    public readonly diagnostics: Diagnostic[] = [];
+
     protected error(options: ErrorOptions): never {
         throw new ParserError(
             options.message,
@@ -113,6 +118,14 @@ class Parser {
                 ? this.combineLocations(...options.nodes)
                 : options.location!
         );
+    }
+
+    protected diagnostic(diagnostic: Diagnostic) {
+        throw new ParserError("", diagnostic.location, diagnostic);
+    }
+
+    protected pushDiagnostic(diagnostic: Diagnostic) {
+        this.diagnostics.push(diagnostic);
     }
 
     protected combineLocations(
@@ -686,16 +699,50 @@ class Parser {
         defaultValue = AccessModifier.Private
     ) {
         let accessModifier: AccessModifier | null = null;
-
+        let modifierToken: Token | null = null;
         for (const token of context.tokenStack) {
             if (this.accessModifierTokens.includes(token.type)) {
-                if (accessModifier) {
-                    throw new ParserError(
-                        "Multiple access modifiers in a single declaration",
-                        token.location
-                    );
+                if (modifierToken) {
+                    if (
+                        token.location.start[0] !==
+                        modifierToken.location.start[0]
+                    ) {
+                        this.pushDiagnostic({
+                            code: DiagnosticCode.ConflictingAccessModifiers,
+                            level: DiagnosticLevel.Note,
+                            message: "Previous modifier applied here",
+                            location: modifierToken.location
+                        });
+                    }
+
+                    this.diagnostic({
+                        code: DiagnosticCode.ConflictingAccessModifiers,
+                        level: DiagnosticLevel.Error,
+                        message: `Conflicting access modifier '${token.value}'`,
+                        location: token.location,
+                        suggestions: [
+                            ...(token.location.start[0] ===
+                            modifierToken.location.start[0]
+                                ? [
+                                      {
+                                          message:
+                                              "Previous modifier applied here",
+                                          columnOffset:
+                                              modifierToken.location.start[1] -
+                                              1
+                                      }
+                                  ]
+                                : []),
+                            {
+                                message:
+                                    "Consider removing this extra modifier",
+                                columnOffset: token.location.start[1] - 1
+                            }
+                        ]
+                    });
                 }
 
+                modifierToken = token;
                 accessModifier =
                     token.type === TokenType.Public
                         ? AccessModifier.Public
