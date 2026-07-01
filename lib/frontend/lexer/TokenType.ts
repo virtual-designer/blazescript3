@@ -57,7 +57,8 @@ enum TokenType {
     Operator,
     Await,
     Return,
-    Import
+    Import,
+    Spaceship
 }
 
 export default TokenType;

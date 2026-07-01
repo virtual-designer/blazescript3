@@ -28,6 +28,7 @@ class Tokenizer {
     } as const;
 
     public static readonly MULTI_CHAR_TOKENS = {
+        "<=>": TokenType.Spaceship,
         "==": TokenType.EqualEqual,
         "!=": TokenType.NotEqual,
         ">=": TokenType.GreaterThanEqual,

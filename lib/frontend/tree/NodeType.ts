@@ -20,7 +20,8 @@ enum NodeType {
     FunctionParameterDeclaration,
     AwaitExpression,
     ReturnStatement,
-    ImportStatement
+    ImportStatement,
+    AssignmentExpression
 }
 
 export default NodeType;

@@ -6,10 +6,10 @@ import TokenType from "../lexer/TokenType.ts";
 import type AbstractNode from "../tree/AbstractNode.ts";
 import { AccessModifier } from "../tree/AccessModifier.ts";
 import AssignmentExpressionNode from "../tree/AssignmentExpressionNode.ts";
+import { AssignmentOperator } from "../tree/AssignmentOperator.ts";
 import AwaitExpressionNode from "../tree/AwaitExpressionNode.ts";
 import BinaryExpressionNode from "../tree/BinaryExpressionNode.ts";
 import BinaryOperator, {
-    type AssignmentOperator,
     type ComparisonOperator
 } from "../tree/BinaryOperator.ts";
 import BlockStatementNode from "../tree/BlockStatementNode.ts";
@@ -55,6 +55,7 @@ type ParserContext = {
     peek(index?: number): Token | null;
     consume(): Token | null;
     expect(types?: TokenType[]): Token;
+    unexpected(token: Token | null | undefined): never;
     assertStackEmpty(message?: string): void;
 };
 
@@ -88,8 +89,12 @@ class Parser {
         NodeType.FunctionDeclaration
     ];
 
+    protected readonly spaceshipOperatorMap = {
+        [TokenType.Spaceship]: BinaryOperator.Spaceship
+    } as const;
+
     protected readonly assignmentOperatorMap = {
-        [TokenType.Equal]: BinaryOperator.Assignment
+        [TokenType.Equal]: AssignmentOperator.Assignment
     } satisfies Record<number, AssignmentOperator>;
 
     protected readonly comparisonOperatorMap = {
@@ -99,6 +104,17 @@ class Parser {
         [TokenType.LessThanEqual]: BinaryOperator.LessThanOrEqual,
         [TokenType.GreaterThan]: BinaryOperator.GreaterThan,
         [TokenType.GreaterThanEqual]: BinaryOperator.GreaterThanOrEqual
+    } as const;
+
+    protected readonly additiveArithmeticOperatorMap = {
+        [TokenType.Plus]: BinaryOperator.Plus,
+        [TokenType.Minus]: BinaryOperator.Minus
+    } as const;
+
+    protected readonly multiplicativeArithmeticOperatorMap = {
+        [TokenType.Modulus]: BinaryOperator.Modulus,
+        [TokenType.Times]: BinaryOperator.Multiply,
+        [TokenType.Slash]: BinaryOperator.Divide
     } as const;
 
     protected readonly prefixUnaryOperatorMap = {
@@ -118,6 +134,49 @@ class Parser {
         [TokenType.Pipe]: BinaryOperator.Union,
         [TokenType.Ampersand]: BinaryOperator.Intersection
     } as const;
+
+    protected readonly binaryOperatorPrecedencyRules = [
+        {
+            tokenMap: this.multiplicativeArithmeticOperatorMap,
+            leftBindingPower: 50,
+            rightBindingPower: 50
+        },
+        {
+            tokenMap: this.additiveArithmeticOperatorMap,
+            leftBindingPower: 40,
+            rightBindingPower: 40
+        },
+        {
+            tokenMap: this.comparisonOperatorMap,
+            leftBindingPower: 20,
+            rightBindingPower: 20
+        },
+        {
+            tokenMap: this.spaceshipOperatorMap,
+            leftBindingPower: 10,
+            rightBindingPower: 10
+        }
+    ]
+        .map(o => {
+            const record = Object.create(null);
+
+            for (const key of Object.getOwnPropertyNames(o.tokenMap)) {
+                record[+key] = [
+                    o.leftBindingPower,
+                    o.rightBindingPower,
+                    o.tokenMap[+key as keyof typeof o.tokenMap]
+                ];
+            }
+
+            return record as Record<
+                TokenType,
+                [number, number, BinaryOperator]
+            >;
+        })
+        .reduce(
+            (acc, value) => Object.assign(acc, value),
+            {} as Record<TokenType, [number, number, BinaryOperator]>
+        );
 
     public readonly diagnostics: Diagnostic[] = [];
 
@@ -192,6 +251,19 @@ class Parser {
             peek: (index = 0) =>
                 context.tokens.at(context.index + index) ?? null,
             consume: () => context.tokens.at(context.index++) ?? null,
+            unexpected: token => {
+                if (!token) {
+                    throw new ParserError(
+                        "Unexpected end of file",
+                        context.tokens.at(-1)!.location
+                    );
+                }
+
+                throw new ParserError(
+                    `Unexpected token: ${token.value}`,
+                    token.location
+                );
+            },
             expect: (types): Token => {
                 const token = context.consume();
 
@@ -203,10 +275,7 @@ class Parser {
                 }
 
                 if (types && !types.includes(token.type)) {
-                    throw new ParserError(
-                        `Unexpected token: ${token.value}`,
-                        token.location
-                    );
+                    context.unexpected(token);
                 }
 
                 return token;
@@ -527,90 +596,50 @@ class Parser {
         return expression;
     }
 
-    protected parseMultiplicativeExpression(
-        context: ParserContext
-    ): ExpressionNode {
-        let left: ExpressionNode = this.parsePrefixUnaryExpression(context);
+    protected parseBasicBinaryExpression(
+        context: ParserContext,
+        minBindingPower = Number.NEGATIVE_INFINITY
+    ) {
+        let left = this.parsePrefixUnaryExpression(context);
 
-        while (
-            !context.isEOF() &&
-            (context.peek()?.type === TokenType.Times ||
-                context.peek()?.type === TokenType.Slash ||
-                context.peek()?.type === TokenType.Modulus)
-        ) {
-            const operator =
-                context.peek()?.type === TokenType.Times
-                    ? BinaryOperator.Multiply
-                    : context.peek()?.type === TokenType.Slash
-                      ? BinaryOperator.Divide
-                      : BinaryOperator.Modulus;
+        while (!context.isEOF()) {
+            const currentToken = context.peek();
 
-            context.consume();
-            const right = this.parsePrefixUnaryExpression(context);
+            if (!currentToken) {
+                throw new ParserError(
+                    "Unexpected end of file",
+                    context.tokens.at(0)!.location
+                );
+            }
 
-            left = new BinaryExpressionNode(
-                operator,
-                left,
-                right,
-                this.combineLocations(left, right)
-            );
-        }
+            if (currentToken.type in this.binaryOperatorPrecedencyRules) {
+                const [leftBindingPower, rightBindingPower, operator] =
+                    this.binaryOperatorPrecedencyRules[currentToken.type] ?? [];
 
-        return left;
-    }
+                if (leftBindingPower <= minBindingPower) {
+                    break;
+                }
 
-    protected parseAdditiveExpression(context: ParserContext): ExpressionNode {
-        let left: ExpressionNode = this.parseMultiplicativeExpression(context);
+                if (operator === undefined) {
+                    context.unexpected(currentToken);
+                }
 
-        while (
-            !context.isEOF() &&
-            (context.peek()?.type === TokenType.Plus ||
-                context.peek()?.type === TokenType.Minus)
-        ) {
-            const operator =
-                context.peek()?.type === TokenType.Plus
-                    ? BinaryOperator.Plus
-                    : BinaryOperator.Minus;
+                context.consume();
 
-            context.consume();
-            const right = this.parseMultiplicativeExpression(context);
+                const right = this.parseBasicBinaryExpression(
+                    context,
+                    rightBindingPower
+                );
 
-            left = new BinaryExpressionNode(
-                operator,
-                left,
-                right,
-                this.combineLocations(left, right)
-            );
-        }
-
-        return left;
-    }
-
-    protected parseComparisonExpression(
-        context: ParserContext
-    ): ExpressionNode {
-        let left: ExpressionNode = this.parseRangeExpression(context);
-
-        while (
-            !context.isEOF() &&
-            context.peek()?.type &&
-            context.peek()!.type in this.comparisonOperatorMap
-        ) {
-            const operator =
-                this.comparisonOperatorMap[
-                    context.peek()!
-                        .type as keyof typeof this.comparisonOperatorMap
-                ];
-
-            context.consume();
-            const right = this.parseRangeExpression(context);
-
-            left = new BinaryExpressionNode(
-                operator,
-                left,
-                right,
-                this.combineLocations(left, right)
-            );
+                left = new BinaryExpressionNode(
+                    operator,
+                    left,
+                    right,
+                    this.combineLocations(left, right)
+                );
+            } else {
+                break;
+            }
         }
 
         return left;
@@ -619,7 +648,7 @@ class Parser {
     protected parseAssignmentExpression(
         context: ParserContext
     ): ExpressionNode {
-        let left: ExpressionNode = this.parseComparisonExpression(context);
+        let left: ExpressionNode = this.parseRangeExpression(context);
         const leftTypes = [NodeType.Identifier];
 
         if (!leftTypes.includes(left.type)) {
@@ -644,7 +673,7 @@ class Parser {
             this.error({ message: "Invalid state", nodes: [left] });
         }
 
-        const operator =
+        const operator: AssignmentOperator =
             this.assignmentOperatorMap[
                 token.type as keyof typeof this.assignmentOperatorMap
             ];
@@ -1086,7 +1115,7 @@ class Parser {
     }
 
     protected parseRangeExpression(context: ParserContext): ExpressionNode {
-        const left = this.parseAdditiveExpression(context);
+        const left = this.parseBasicBinaryExpression(context);
 
         if (
             context.peek()?.type !== TokenType.DotDot &&
@@ -1111,7 +1140,7 @@ class Parser {
             context.consume();
         }
 
-        const right = this.parseAdditiveExpression(context);
+        const right = this.parseBasicBinaryExpression(context);
 
         return new RangeExpressionNode(
             left,

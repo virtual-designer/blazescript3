@@ -1,11 +1,10 @@
 import ESTree from "estree";
 import type AbstractNode from "../frontend/tree/AbstractNode.ts";
 import { AccessModifier } from "../frontend/tree/AccessModifier.ts";
+import type AssignmentExpressionNode from "../frontend/tree/AssignmentExpressionNode.ts";
 import type AwaitExpressionNode from "../frontend/tree/AwaitExpressionNode.ts";
 import type BinaryExpressionNode from "../frontend/tree/BinaryExpressionNode.ts";
-import BinaryOperator, {
-    AssignmentOperators
-} from "../frontend/tree/BinaryOperator.ts";
+import BinaryOperator from "../frontend/tree/BinaryOperator.ts";
 import type BlockStatementNode from "../frontend/tree/BlockStatementNode.ts";
 import type CallExpressionNode from "../frontend/tree/CallExpressionNode.ts";
 import ExpressionNode from "../frontend/tree/ExpressionNode.ts";
@@ -110,6 +109,11 @@ class Transformer {
             case NodeType.BinaryExpression:
                 return this.transformBinaryExpression(
                     node as BinaryExpressionNode
+                );
+
+            case NodeType.AssignmentExpression:
+                return this.transformAssignmentExpression(
+                    node as AssignmentExpressionNode
                 );
 
             case NodeType.CallExpression:
@@ -287,6 +291,40 @@ class Transformer {
         };
     }
 
+    protected transformJSBinaryOperation(
+        operator: BinaryOperator,
+        left: ESTree.Expression,
+        right: ESTree.Expression
+    ): ESTree.BinaryExpression {
+        switch (operator) {
+            case BinaryOperator.Spaceship:
+                return {
+                    type: "BinaryExpression",
+                    left: {
+                        type: "BinaryExpression",
+                        left,
+                        right,
+                        operator: ">"
+                    },
+                    right: {
+                        type: "BinaryExpression",
+                        left,
+                        right,
+                        operator: "<"
+                    },
+                    operator: "-"
+                };
+
+            default:
+                return {
+                    type: "BinaryExpression",
+                    left,
+                    right,
+                    operator
+                };
+        }
+    }
+
     protected transformMatchExpression(
         node: MatchExpressionNode
     ): ESTree.Expression {
@@ -348,18 +386,17 @@ class Transformer {
                     {
                         let cond: ESTree.Statement = {
                             type: "IfStatement",
-                            test: {
-                                type: "BinaryExpression",
-                                left: {
+                            test: this.transformJSBinaryOperation(
+                                definedCase.comparisonOperator ||
+                                    BinaryOperator.Equal,
+                                {
                                     type: "Identifier",
                                     name: subjectVarName
                                 },
-                                operator:
-                                    definedCase.comparisonOperator || "==",
-                                right: this.transformExpression(
+                                this.transformExpression(
                                     definedCase.comparisonTarget!
                                 )
-                            },
+                            ),
                             consequent: {
                                 type: "ReturnStatement",
                                 argument: this.transformExpression(
@@ -494,26 +531,25 @@ class Transformer {
         };
     }
 
+    protected transformAssignmentExpression(
+        node: AssignmentExpressionNode
+    ): ESTree.AssignmentExpression {
+        return {
+            type: "AssignmentExpression",
+            left: this.transformExpression(node.left) as ESTree.Pattern,
+            right: this.transformExpression(node.right) as ESTree.Expression,
+            operator: node.operator as ESTree.AssignmentOperator
+        };
+    }
+
     protected transformBinaryExpression(
         node: BinaryExpressionNode
-    ): ESTree.BinaryExpression | ESTree.AssignmentExpression {
-        if (AssignmentOperators.includes(node.operator)) {
-            return {
-                type: "AssignmentExpression",
-                left: this.transformExpression(node.left) as ESTree.Pattern,
-                right: this.transformExpression(
-                    node.right
-                ) as ESTree.Expression,
-                operator: node.operator as ESTree.AssignmentOperator
-            };
-        }
-
-        return {
-            type: "BinaryExpression",
-            left: this.transformExpression(node.left) as ESTree.Expression,
-            right: this.transformExpression(node.right) as ESTree.Expression,
-            operator: node.operator as ESTree.BinaryOperator
-        };
+    ): ESTree.BinaryExpression {
+        return this.transformJSBinaryOperation(
+            node.operator,
+            this.transformExpression(node.left),
+            this.transformExpression(node.right)
+        );
     }
 
     protected transformUnaryExpression(

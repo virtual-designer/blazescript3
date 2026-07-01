@@ -1,3 +1,4 @@
+import AssignmentExpressionNode from "./AssignmentExpressionNode.ts";
 import AwaitExpressionNode from "./AwaitExpressionNode.ts";
 import BinaryExpressionNode from "./BinaryExpressionNode.ts";
 import BlockStatementNode from "./BlockStatementNode.ts";
@@ -44,7 +45,8 @@ export const NodeMap = {
     [NodeType.FunctionParameterDeclaration]: FunctionParameterDeclarationNode,
     [NodeType.AwaitExpression]: AwaitExpressionNode,
     [NodeType.ReturnStatement]: ReturnStatementNode,
-    [NodeType.ImportStatement]: ImportStatementNode
+    [NodeType.ImportStatement]: ImportStatementNode,
+    [NodeType.AssignmentExpression]: AssignmentExpressionNode
 } as const;
 
 export type NodeMapType = {
