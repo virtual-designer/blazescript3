@@ -61,7 +61,7 @@
                 },
                 {
                     "name": "keyword.operator.new.blazescript",
-                    "match": "(=>|(\\b(in|true|false|null|new)\\b))"
+                    "match": "(<=>|=>|(\\b(in|true|false|null|new)\\b))"
                 }
             ]
         },
