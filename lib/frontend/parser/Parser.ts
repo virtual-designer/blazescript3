@@ -25,6 +25,7 @@ import FunctionDeclarationNode from "../tree/FunctionDeclarationNode.ts";
 import FunctionParameterDeclarationNode from "../tree/FunctionParameterDeclarationNode.ts";
 import IdentifierNode from "../tree/IdentifierNode.ts";
 import IfStatementNode from "../tree/IfStatementNode.ts";
+import ImportStatementNode from "../tree/ImportStatementNode.ts";
 import LiteralNode from "../tree/LiteralNode.ts";
 import LiteralNodeKind from "../tree/LiteralNodeKind.ts";
 import type { Location } from "../tree/Location.ts";
@@ -1158,6 +1159,38 @@ class Parser {
         );
     }
 
+    protected parseImportStatement(context: ParserContext): AbstractNode {
+        const token = context.expect([TokenType.Import]);
+        const path: IdentifierNode[] = [];
+        let identifier: IdentifierNode | null = null;
+
+        while (context.peek()?.type === TokenType.Identifier) {
+            if (identifier) {
+                path.push(identifier);
+            }
+
+            identifier = this.parseIdentifier(context);
+
+            if (
+                context.peek()?.type !== TokenType.Semicolon &&
+                context.peek(1)?.type === TokenType.Identifier
+            ) {
+                context.expect([TokenType.Dot]);
+            }
+        }
+
+        if (!identifier) {
+            context.expect([TokenType.Identifier]);
+            throw new Error();
+        }
+
+        return new ImportStatementNode(
+            path,
+            identifier,
+            this.combineLocations(token, ...path, identifier)
+        );
+    }
+
     protected parseEmptyStatement(context: ParserContext): AbstractNode {
         const token = context.expect([TokenType.Semicolon]);
 
@@ -1267,6 +1300,10 @@ class Parser {
 
             case TokenType.Semicolon:
                 node = this.parseEmptyStatement(context);
+                break;
+
+            case TokenType.Import:
+                node = this.parseImportStatement(context);
                 break;
 
             default:

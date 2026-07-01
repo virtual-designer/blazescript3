@@ -16,6 +16,7 @@ import { FunctionDeclarationModifier } from "../frontend/tree/FunctionDeclaratio
 import type FunctionDeclarationNode from "../frontend/tree/FunctionDeclarationNode.ts";
 import type IdentifierNode from "../frontend/tree/IdentifierNode.ts";
 import type IfStatementNode from "../frontend/tree/IfStatementNode.ts";
+import type ImportStatementNode from "../frontend/tree/ImportStatementNode.ts";
 import type LiteralNode from "../frontend/tree/LiteralNode.ts";
 import type MatchExpressionCaseNode from "../frontend/tree/MatchExpressionCaseNode.ts";
 import { MatchExpressionCaseKind } from "../frontend/tree/MatchExpressionCaseNode.ts";
@@ -73,6 +74,11 @@ class Transformer {
                     node as ReturnStatementNode
                 );
 
+            case NodeType.ImportStatement:
+                return this.transformImportStatement(
+                    node as ImportStatementNode
+                );
+
             case NodeType.EmptyStatement:
                 return { type: "EmptyStatement" };
 
@@ -127,6 +133,31 @@ class Transformer {
             default:
                 throw new Error(`Unsupported node: ${node}`);
         }
+    }
+
+    protected transformImportStatement(
+        node: ImportStatementNode
+    ): ESTree.ImportDeclaration {
+        return {
+            type: "ImportDeclaration",
+            source: {
+                type: "Literal",
+                value:
+                    "./" +
+                    [
+                        ...node.path.map(id => id.symbol),
+                        `${node.identifier.symbol}.js`
+                    ].join("/")
+            },
+            specifiers: [
+                {
+                    type: "ImportSpecifier",
+                    local: this.transformIdentifier(node.identifier),
+                    imported: this.transformIdentifier(node.identifier)
+                }
+            ],
+            attributes: []
+        };
     }
 
     protected transformReturnStatement(

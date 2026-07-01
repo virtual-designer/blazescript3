@@ -63,7 +63,8 @@ class Tokenizer {
         override: TokenType.Override,
         operator: TokenType.Operator,
         await: TokenType.Await,
-        return: TokenType.Return
+        return: TokenType.Return,
+        import: TokenType.Import
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);

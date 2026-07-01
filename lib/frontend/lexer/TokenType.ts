@@ -56,7 +56,8 @@ enum TokenType {
     Override,
     Operator,
     Await,
-    Return
+    Return,
+    Import
 }
 
 export default TokenType;

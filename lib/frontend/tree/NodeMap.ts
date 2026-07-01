@@ -10,6 +10,7 @@ import FunctionDeclarationNode from "./FunctionDeclarationNode.ts";
 import FunctionParameterDeclarationNode from "./FunctionParameterDeclarationNode.ts";
 import IdentifierNode from "./IdentifierNode.ts";
 import IfStatementNode from "./IfStatementNode.ts";
+import ImportStatementNode from "./ImportStatementNode.ts";
 import LiteralNode from "./LiteralNode.ts";
 import MatchExpressionCaseNode from "./MatchExpressionCaseNode.ts";
 import MatchExpressionNode from "./MatchExpressionNode.ts";
@@ -42,7 +43,8 @@ export const NodeMap = {
     [NodeType.FunctionDeclaration]: FunctionDeclarationNode,
     [NodeType.FunctionParameterDeclaration]: FunctionParameterDeclarationNode,
     [NodeType.AwaitExpression]: AwaitExpressionNode,
-    [NodeType.ReturnStatement]: ReturnStatementNode
+    [NodeType.ReturnStatement]: ReturnStatementNode,
+    [NodeType.ImportStatement]: ImportStatementNode
 } as const;
 
 export type NodeMapType = {
