@@ -1,9 +1,9 @@
-import DeclarationNode from "./DeclarationNode.ts";
-import type ExpressionNode from "./ExpressionNode.ts";
-import type IdentifierNode from "./IdentifierNode.ts";
-import type { Location } from "./Location.ts";
-import NodeType from "./NodeType.ts";
-import type { TypeExpressionNode } from "./TypeExpressionNode.ts";
+import DeclarationNode from "../DeclarationNode.ts";
+import type ExpressionNode from "../ExpressionNode.ts";
+import type IdentifierNode from "../expressions/IdentifierNode.ts";
+import type { TypeExpressionNode } from "../expressions/TypeExpressionNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
 
 class FunctionParameterDeclarationNode extends DeclarationNode {
     public override readonly type = NodeType.FunctionParameterDeclaration;

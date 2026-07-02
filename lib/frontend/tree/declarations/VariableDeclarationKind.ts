@@ -1,7 +1,7 @@
 enum VariableDeclarationKind {
-    Let,
-    Final,
-    Const
+    Let = "let",
+    Final = "final",
+    Const = "const"
 }
 
 export default VariableDeclarationKind;

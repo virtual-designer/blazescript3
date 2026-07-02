@@ -1,6 +1,6 @@
-import BinaryExpressionNode from "../frontend/tree/BinaryExpressionNode.ts";
 import type ExpressionNode from "../frontend/tree/ExpressionNode.ts";
-import IdentifierNode from "../frontend/tree/IdentifierNode.ts";
+import BinaryExpressionNode from "../frontend/tree/expressions/BinaryExpressionNode.ts";
+import IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
 
 class TypeUtils {
     public static stringifyExpressionNode(expression: ExpressionNode): string {

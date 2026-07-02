@@ -1,11 +1,11 @@
-import AbstractNode from "./AbstractNode.ts";
+import type AbstractNode from "../AbstractNode.ts";
+import DeclarationNode from "../DeclarationNode.ts";
+import type ExpressionNode from "../ExpressionNode.ts";
+import type IdentifierNode from "../expressions/IdentifierNode.ts";
+import type { TypeExpressionNode } from "../expressions/TypeExpressionNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
 import type { AccessModifier } from "./AccessModifier.ts";
-import DeclarationNode from "./DeclarationNode.ts";
-import type ExpressionNode from "./ExpressionNode.ts";
-import type IdentifierNode from "./IdentifierNode.ts";
-import type { Location } from "./Location.ts";
-import NodeType from "./NodeType.ts";
-import type { TypeExpressionNode } from "./TypeExpressionNode.ts";
 import type VariableDeclarationKind from "./VariableDeclarationKind.ts";
 
 class VariableDeclarationNode extends DeclarationNode {

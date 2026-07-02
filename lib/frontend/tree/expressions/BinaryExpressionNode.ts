@@ -1,8 +1,7 @@
-import type AssignmentExpressionNode from "./AssignmentExpressionNode.ts";
+import ExpressionNode from "../ExpressionNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
 import BinaryOperator from "./BinaryOperator.ts";
-import ExpressionNode from "./ExpressionNode.ts";
-import type { Location } from "./Location.ts";
-import NodeType from "./NodeType.ts";
 
 class BinaryExpressionNode extends ExpressionNode {
     public override readonly type = NodeType.BinaryExpression;
@@ -24,10 +23,6 @@ class BinaryExpressionNode extends ExpressionNode {
 
     public override branches() {
         return [...super.branches(), this.left, this.right];
-    }
-
-    public isAssignment(): this is AssignmentExpressionNode {
-        return this.operator === BinaryOperator.Assignment;
     }
 }
 

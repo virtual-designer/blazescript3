@@ -1,9 +1,9 @@
-import AbstractNode from "./AbstractNode.ts";
-import type ExpressionNode from "./ExpressionNode.ts";
-import type { Location } from "./Location.ts";
-import NodeType from "./NodeType.ts";
-import StatementNode from "./StatementNode.ts";
-import type VariableDeclarationNode from "./VariableDeclarationNode.ts";
+import AbstractNode from "../AbstractNode.ts";
+import type ExpressionNode from "../ExpressionNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
+import StatementNode from "../StatementNode.ts";
+import type VariableDeclarationNode from "../declarations/VariableDeclarationNode.ts";
 
 class ForInStatementNode extends StatementNode {
     public override readonly type = NodeType.ForInStatement;

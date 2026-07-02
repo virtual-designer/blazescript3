@@ -4,46 +4,50 @@ import { DiagnosticLevel } from "../../diagnostic/DiagnosticLevel.ts";
 import Token from "../lexer/Token.ts";
 import TokenType from "../lexer/TokenType.ts";
 import type AbstractNode from "../tree/AbstractNode.ts";
-import { AccessModifier } from "../tree/AccessModifier.ts";
-import AssignmentExpressionNode from "../tree/AssignmentExpressionNode.ts";
-import { AssignmentOperator } from "../tree/AssignmentOperator.ts";
-import AwaitExpressionNode from "../tree/AwaitExpressionNode.ts";
-import BinaryExpressionNode from "../tree/BinaryExpressionNode.ts";
+import type DeclarationNode from "../tree/DeclarationNode.ts";
+import { AccessModifier } from "../tree/declarations/AccessModifier.ts";
+import { FunctionDeclarationModifier } from "../tree/declarations/FunctionDeclarationModifier.ts";
+import FunctionDeclarationNode from "../tree/declarations/FunctionDeclarationNode.ts";
+import FunctionParameterDeclarationNode from "../tree/declarations/FunctionParameterDeclarationNode.ts";
+import VariableDeclarationKind from "../tree/declarations/VariableDeclarationKind.ts";
+import VariableDeclarationNode from "../tree/declarations/VariableDeclarationNode.ts";
+import type ExpressionNode from "../tree/ExpressionNode.ts";
+import AssignmentExpressionNode from "../tree/expressions/AssignmentExpressionNode.ts";
+import {
+    AssignmentLValueExpressions,
+    type AssignmentLValueExpression
+} from "../tree/expressions/AssignmentLValueExpression.ts";
+import { AssignmentOperator } from "../tree/expressions/AssignmentOperator.ts";
+import AwaitExpressionNode from "../tree/expressions/AwaitExpressionNode.ts";
+import BinaryExpressionNode from "../tree/expressions/BinaryExpressionNode.ts";
 import BinaryOperator, {
     type ComparisonOperator
-} from "../tree/BinaryOperator.ts";
-import BlockStatementNode from "../tree/BlockStatementNode.ts";
-import CallExpressionNode from "../tree/CallExpressionNode.ts";
-import type DeclarationNode from "../tree/DeclarationNode.ts";
-import EmptyStatementNode from "../tree/EmptyStatementNode.ts";
-import type ExpressionNode from "../tree/ExpressionNode.ts";
-import ExpressionStatementNode from "../tree/ExpressionStatementNode.ts";
-import ForInStatementNode from "../tree/ForInStatementNode.ts";
-import ForStatementNode from "../tree/ForStatementNode.ts";
-import { FunctionDeclarationModifier } from "../tree/FunctionDeclarationModifier.ts";
-import FunctionDeclarationNode from "../tree/FunctionDeclarationNode.ts";
-import FunctionParameterDeclarationNode from "../tree/FunctionParameterDeclarationNode.ts";
-import IdentifierNode from "../tree/IdentifierNode.ts";
-import IfStatementNode from "../tree/IfStatementNode.ts";
-import ImportStatementNode from "../tree/ImportStatementNode.ts";
-import LiteralNode from "../tree/LiteralNode.ts";
-import LiteralNodeKind from "../tree/LiteralNodeKind.ts";
-import type { Location } from "../tree/Location.ts";
+} from "../tree/expressions/BinaryOperator.ts";
+import CallExpressionNode from "../tree/expressions/CallExpressionNode.ts";
+import IdentifierNode from "../tree/expressions/IdentifierNode.ts";
+import LiteralNode from "../tree/expressions/LiteralNode.ts";
+import LiteralNodeKind from "../tree/expressions/LiteralNodeKind.ts";
 import MatchExpressionCaseNode, {
     MatchExpressionCaseKind
-} from "../tree/MatchExpressionCaseNode.ts";
-import MatchExpressionNode from "../tree/MatchExpressionNode.ts";
+} from "../tree/expressions/MatchExpressionCaseNode.ts";
+import MatchExpressionNode from "../tree/expressions/MatchExpressionNode.ts";
+import RangeExpressionNode from "../tree/expressions/RangeExpressionNode.ts";
+import type { TypeExpressionNode } from "../tree/expressions/TypeExpressionNode.ts";
+import { UnaryExpressionKind } from "../tree/expressions/UnaryExpressionKind.ts";
+import UnaryExpressionNode from "../tree/expressions/UnaryExpressionNode.ts";
+import UnaryOperator from "../tree/expressions/UnaryOperator.ts";
+import type { Location } from "../tree/Location.ts";
 import NodeType from "../tree/NodeType.ts";
-import RangeExpressionNode from "../tree/RangeExpressionNode.ts";
-import ReturnStatementNode from "../tree/ReturnStatementNode.ts";
 import RootNode from "../tree/RootNode.ts";
-import type { TypeExpressionNode } from "../tree/TypeExpressionNode.ts";
-import { UnaryExpressionKind } from "../tree/UnaryExpressionKind.ts";
-import UnaryExpressionNode from "../tree/UnaryExpressionNode.ts";
-import UnaryOperator from "../tree/UnaryOperator.ts";
-import VariableDeclarationKind from "../tree/VariableDeclarationKind.ts";
-import VariableDeclarationNode from "../tree/VariableDeclarationNode.ts";
-import WhileStatementNode from "../tree/WhileStatementNode.ts";
+import BlockStatementNode from "../tree/statements/BlockStatementNode.ts";
+import EmptyStatementNode from "../tree/statements/EmptyStatementNode.ts";
+import ExpressionStatementNode from "../tree/statements/ExpressionStatementNode.ts";
+import ForInStatementNode from "../tree/statements/ForInStatementNode.ts";
+import ForStatementNode from "../tree/statements/ForStatementNode.ts";
+import IfStatementNode from "../tree/statements/IfStatementNode.ts";
+import ImportStatementNode from "../tree/statements/ImportStatementNode.ts";
+import ReturnStatementNode from "../tree/statements/ReturnStatementNode.ts";
+import WhileStatementNode from "../tree/statements/WhileStatementNode.ts";
 import ParserError from "./ParserError.ts";
 
 type ParserContext = {
@@ -649,9 +653,8 @@ class Parser {
         context: ParserContext
     ): ExpressionNode {
         let left: ExpressionNode = this.parseRangeExpression(context);
-        const leftTypes = [NodeType.Identifier];
 
-        if (!leftTypes.includes(left.type)) {
+        if (!AssignmentLValueExpressions.includes(left.type)) {
             return left;
         }
 
@@ -684,11 +687,15 @@ class Parser {
 
         context.consume();
 
+        if (!AssignmentLValueExpressions.includes(left.type)) {
+            this.error({ message: "Expected lvalue", nodes: [left] });
+        }
+
         const right = this.parseAssignmentExpression(context);
 
         left = new AssignmentExpressionNode(
             operator,
-            left,
+            left as AssignmentLValueExpression,
             right,
             this.combineLocations(left, right)
         );

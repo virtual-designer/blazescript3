@@ -1,7 +1,7 @@
-import ExpressionNode from "./ExpressionNode.ts";
+import ExpressionNode from "../ExpressionNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
 import LiteralNodeKind from "./LiteralNodeKind.ts";
-import type { Location } from "./Location.ts";
-import NodeType from "./NodeType.ts";
 
 class LiteralNode extends ExpressionNode {
     public override readonly type = NodeType.Literal;

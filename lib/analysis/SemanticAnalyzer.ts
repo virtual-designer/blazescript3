@@ -3,32 +3,18 @@ import type { Diagnostic } from "../diagnostic/Diagnostic.ts";
 import { DiagnosticCode } from "../diagnostic/DiagnosticCode.ts";
 import { DiagnosticLevel } from "../diagnostic/DiagnosticLevel.ts";
 import type AbstractNode from "../frontend/tree/AbstractNode.ts";
-import IdentifierNode from "../frontend/tree/IdentifierNode.ts";
+import VariableDeclarationKind from "../frontend/tree/declarations/VariableDeclarationKind.ts";
+import VariableDeclarationNode from "../frontend/tree/declarations/VariableDeclarationNode.ts";
+import IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
+import UnaryOperator from "../frontend/tree/expressions/UnaryOperator.ts";
 import NodeType from "../frontend/tree/NodeType.ts";
-import UnaryOperator from "../frontend/tree/UnaryOperator.ts";
-import VariableDeclarationKind from "../frontend/tree/VariableDeclarationKind.ts";
-import VariableDeclarationNode from "../frontend/tree/VariableDeclarationNode.ts";
 import TypeUtils from "../types/TypeUtils.ts";
-
-type SyntheticSymbolDefinition = {
-    kind: VariableDeclarationKind;
-    isInitialized: boolean;
-    isAssigned: boolean;
-    hits: number;
-    node: VariableDeclarationNode;
-};
-
-type SyntheticScope = {
-    symbolTable: Map<string, SyntheticSymbolDefinition>;
-    parent: SyntheticScope | null;
-    children: Set<SyntheticScope>;
-};
+import { FunctionDeclarationSymbolDefinition } from "./FunctionDeclarationSymbolDefinition.ts";
+import { Scope } from "./Scope.ts";
+import { VariableDeclarationSymbolDefinition } from "./VariableDeclarationSymbolDefinition.ts";
 
 class SemanticAnalyzer {
-    private traverseScope(
-        scope: SyntheticScope,
-        callback: (scope: SyntheticScope) => void
-    ) {
+    private traverseScope(scope: Scope, callback: (scope: Scope) => void) {
         callback(scope);
 
         for (const childScope of scope.children) {
@@ -37,15 +23,63 @@ class SemanticAnalyzer {
     }
 
     public analyze(sourceNode: AbstractNode): Diagnostic[] {
-        const globalScope: SyntheticScope = {
-            symbolTable: new Map(),
-            parent: null,
-            children: new Set()
-        };
+        const globalScope = new Scope(null);
 
         let functionScopeDepth = 0;
         let scope = globalScope;
         const diagnostics: Diagnostic[] = [];
+
+        const checkIdentifierExistingDefn = (
+            identifier: IdentifierNode,
+            node: AbstractNode
+        ) => {
+            if (scope.symbolTable.has(identifier.symbol)) {
+                const symbol = scope.symbolTable.get(identifier.symbol)!;
+
+                diagnostics.push({
+                    message: `Identifier '${identifier.symbol}' is already defined`,
+                    code: DiagnosticCode.IllegalRedefinition,
+                    level: DiagnosticLevel.Error,
+                    location: identifier.location,
+                    suggestions:
+                        symbol instanceof VariableDeclarationSymbolDefinition &&
+                        node instanceof VariableDeclarationNode
+                            ? symbol.node.kind === node.kind &&
+                              !node.annotatedType &&
+                              !symbol.node.annotatedType
+                                ? []
+                                : [
+                                      {
+                                          message: `Previously defined as '${chalk.blueBright.bold(VariableDeclarationKind[symbol.node.kind as unknown as keyof typeof VariableDeclarationKind].toLowerCase())} ${symbol.node.identifier.symbol}${
+                                              symbol.node.annotatedType
+                                                  ? chalk.whiteBright.dim(
+                                                        ": "
+                                                    ) +
+                                                    chalk.green(
+                                                        TypeUtils.stringifyExpressionNode(
+                                                            symbol.node
+                                                                .annotatedType
+                                                        )
+                                                    )
+                                                  : ""
+                                          }'`
+                                      }
+                                  ]
+                            : []
+                });
+
+                diagnostics.push({
+                    message: `Previous definition of '${identifier.symbol}'`,
+                    code: DiagnosticCode.IllegalRedefinition,
+                    level: DiagnosticLevel.Note,
+                    location: symbol.getSymbolLocation()
+                });
+
+                return false;
+            }
+
+            return true;
+        };
 
         sourceNode.walk({
             [NodeType.VariableDeclaration]: node => {
@@ -83,40 +117,7 @@ class SemanticAnalyzer {
                     });
                 }
 
-                if (scope.symbolTable.has(node.identifier.symbol)) {
-                    const symbol = scope.symbolTable.get(
-                        node.identifier.symbol
-                    )!;
-
-                    diagnostics.push({
-                        message: "Identifier is already defined",
-                        code: DiagnosticCode.IllegalRedefinition,
-                        level: DiagnosticLevel.Error,
-                        location: node.identifier.location,
-                        suggestions:
-                            symbol.node.kind === node.kind &&
-                            !node.annotatedType &&
-                            !symbol.node.annotatedType
-                                ? []
-                                : [
-                                      {
-                                          message: `Previously defined as '${chalk.blueBright.bold(VariableDeclarationKind[symbol.node.kind].toLowerCase())} ${symbol.node.identifier.symbol}${
-                                              symbol.node.annotatedType
-                                                  ? chalk.whiteBright.dim(
-                                                        ": "
-                                                    ) +
-                                                    chalk.green(
-                                                        TypeUtils.stringifyExpressionNode(
-                                                            symbol.node
-                                                                .annotatedType
-                                                        )
-                                                    )
-                                                  : ""
-                                          }'`
-                                      }
-                                  ]
-                    });
-
+                if (!checkIdentifierExistingDefn(node.identifier, node)) {
                     return;
                 }
 
@@ -125,35 +126,49 @@ class SemanticAnalyzer {
                         message: `Modifiers are not allowed for block-scoped identifier '${node.identifier.symbol}'`,
                         code: DiagnosticCode.ModifierNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location: node.location
+                        location: node.identifier.location
                     });
                 }
 
-                scope.symbolTable.set(node.identifier.symbol, {
-                    kind: node.kind,
-                    isInitialized: !!node.value,
-                    isAssigned: false,
-                    hits: node.inline ? 1 : -1,
-                    node
-                });
+                const defn = new VariableDeclarationSymbolDefinition(
+                    node,
+                    false,
+                    node.inline ? 1 : -1
+                );
+
+                scope.symbolTable.set(node.identifier.symbol, defn);
             },
             [NodeType.Identifier]: node => {
                 const symbol = scope.symbolTable.get(node.symbol);
 
                 if (symbol) {
-                    symbol.hits++;
+                    symbol.incrementHit();
                 }
             },
-            [NodeType.BinaryExpression]: node => {
-                if (
-                    node.isAssignment() &&
-                    node.left instanceof IdentifierNode
-                ) {
-                    const symbol = scope.symbolTable.get(node.left.symbol);
+            [NodeType.AssignmentExpression]: node => {
+                const symbol = scope.symbolTable.get(node.left.symbol);
 
-                    if (symbol) {
-                        symbol.isAssigned = true;
+                if (
+                    symbol &&
+                    symbol instanceof VariableDeclarationSymbolDefinition
+                ) {
+                    if (symbol.kind !== VariableDeclarationKind.Let) {
+                        diagnostics.push({
+                            message: `${symbol.kind} declaration '${symbol.node.identifier.symbol}' cannot be reassigned`,
+                            code: DiagnosticCode.IllegalAssignment,
+                            level: DiagnosticLevel.Error,
+                            location: node.left.location
+                        });
+
+                        diagnostics.push({
+                            message: `Consider using 'let' instead of '${symbol.kind}' for '${symbol.node.identifier.symbol}' to allow reassignment`,
+                            code: DiagnosticCode.IllegalAssignment,
+                            level: DiagnosticLevel.Note,
+                            location: symbol.node.identifier.location
+                        });
                     }
+
+                    symbol.setAssigned(true);
                 }
             },
             [NodeType.UnaryExpression]: node => {
@@ -174,8 +189,11 @@ class SemanticAnalyzer {
 
                     const symbol = scope.symbolTable.get(node.operand.symbol);
 
-                    if (symbol) {
-                        symbol.isAssigned = true;
+                    if (
+                        symbol &&
+                        symbol instanceof VariableDeclarationSymbolDefinition
+                    ) {
+                        symbol.setAssigned(true);
                     }
                 }
             },
@@ -185,7 +203,7 @@ class SemanticAnalyzer {
                         message: `Modifiers are not allowed for '${node.variable.identifier.symbol}'`,
                         code: DiagnosticCode.ModifierNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location: node.variable.location
+                        location: node.variable.identifier.location
                     });
                 }
             },
@@ -198,7 +216,7 @@ class SemanticAnalyzer {
                         message: `Modifiers are not allowed for '${node.init.identifier.symbol}'`,
                         code: DiagnosticCode.ModifierNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location: node.init.location
+                        location: node.init.identifier.location
                     });
                 }
             },
@@ -221,8 +239,24 @@ class SemanticAnalyzer {
                     }
                 };
             },
-            [NodeType.FunctionDeclaration]: _ => {
+            [NodeType.FunctionDeclaration]: node => {
                 functionScopeDepth++;
+
+                if (!checkIdentifierExistingDefn(node.identifier, node)) {
+                    return;
+                }
+
+                if (scope.parent !== null && node.accessModifier !== null) {
+                    diagnostics.push({
+                        message: `Modifiers are not allowed for block-scoped identifier '${node.identifier.symbol}'`,
+                        code: DiagnosticCode.ModifierNotAllowed,
+                        level: DiagnosticLevel.Error,
+                        location: node.identifier.location
+                    });
+                }
+
+                const defn = new FunctionDeclarationSymbolDefinition(node, -1);
+                scope.symbolTable.set(node.identifier.symbol, defn);
 
                 return {
                     _cleanup: _ => {
@@ -249,9 +283,11 @@ class SemanticAnalyzer {
                         message: `'${symbolName}' is never used`,
                         code: DiagnosticCode.Unused,
                         level: DiagnosticLevel.Warning,
-                        location: symbolDefinition.node.identifier.location
+                        location: symbolDefinition.getSymbolLocation()
                     });
                 } else if (
+                    symbolDefinition instanceof
+                        VariableDeclarationSymbolDefinition &&
                     !symbolDefinition.isAssigned &&
                     symbolDefinition.node.kind === VariableDeclarationKind.Let
                 ) {

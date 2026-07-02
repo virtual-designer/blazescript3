@@ -1,9 +1,9 @@
-import AbstractNode from "./AbstractNode.ts";
+import AbstractNode from "../AbstractNode.ts";
+import type ExpressionNode from "../ExpressionNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
+import StatementNode from "../StatementNode.ts";
 import type { ComparisonOperator } from "./BinaryOperator.ts";
-import type ExpressionNode from "./ExpressionNode.ts";
-import type { Location } from "./Location.ts";
-import NodeType from "./NodeType.ts";
-import StatementNode from "./StatementNode.ts";
 
 export enum MatchExpressionCaseKind {
     Default,

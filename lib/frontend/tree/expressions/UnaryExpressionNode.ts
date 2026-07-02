@@ -1,6 +1,6 @@
-import ExpressionNode from "./ExpressionNode.ts";
-import type { Location } from "./Location.ts";
-import NodeType from "./NodeType.ts";
+import ExpressionNode from "../ExpressionNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
 import type { UnaryExpressionKind } from "./UnaryExpressionKind.ts";
 import type UnaryOperator from "./UnaryOperator.ts";
 
@@ -21,7 +21,7 @@ class UnaryExpressionNode extends ExpressionNode {
         this.operand = operand;
         this.kind = kind;
     }
-    
+
     public override branches() {
         return [...super.branches(), this.operand];
     }

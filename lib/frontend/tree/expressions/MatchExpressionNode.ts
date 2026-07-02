@@ -1,7 +1,7 @@
-import ExpressionNode from "./ExpressionNode.ts";
-import type { Location } from "./Location.ts";
+import ExpressionNode from "../ExpressionNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
 import type MatchExpressionCaseNode from "./MatchExpressionCaseNode.ts";
-import NodeType from "./NodeType.ts";
 
 class MatchExpressionNode extends ExpressionNode {
     public override readonly type = NodeType.MatchExpression;

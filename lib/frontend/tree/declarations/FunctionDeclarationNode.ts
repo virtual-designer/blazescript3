@@ -1,12 +1,12 @@
+import DeclarationNode from "../DeclarationNode.ts";
+import type IdentifierNode from "../expressions/IdentifierNode.ts";
+import type { TypeExpressionNode } from "../expressions/TypeExpressionNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
+import type BlockStatementNode from "../statements/BlockStatementNode.ts";
 import type { AccessModifier } from "./AccessModifier.ts";
-import type BlockStatementNode from "./BlockStatementNode.ts";
-import DeclarationNode from "./DeclarationNode.ts";
 import { FunctionDeclarationModifier } from "./FunctionDeclarationModifier.ts";
 import type FunctionParameterDeclarationNode from "./FunctionParameterDeclarationNode.ts";
-import type IdentifierNode from "./IdentifierNode.ts";
-import type { Location } from "./Location.ts";
-import NodeType from "./NodeType.ts";
-import type { TypeExpressionNode } from "./TypeExpressionNode.ts";
 
 class FunctionDeclarationNode extends DeclarationNode {
     public override readonly type = NodeType.FunctionDeclaration;

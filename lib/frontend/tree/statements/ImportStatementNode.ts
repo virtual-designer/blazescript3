@@ -1,7 +1,7 @@
-import type IdentifierNode from "./IdentifierNode.ts";
-import type { Location } from "./Location.ts";
-import NodeType from "./NodeType.ts";
-import StatementNode from "./StatementNode.ts";
+import type IdentifierNode from "../expressions/IdentifierNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
+import StatementNode from "../StatementNode.ts";
 
 class ImportStatementNode extends StatementNode {
     public override readonly type = NodeType.ImportStatement;

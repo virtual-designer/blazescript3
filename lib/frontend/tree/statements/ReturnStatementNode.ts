@@ -1,7 +1,7 @@
-import ExpressionNode from "./ExpressionNode.ts";
-import type { Location } from "./Location.ts";
-import NodeType from "./NodeType.ts";
-import StatementNode from "./StatementNode.ts";
+import ExpressionNode from "../ExpressionNode.ts";
+import type { Location } from "../Location.ts";
+import NodeType from "../NodeType.ts";
+import StatementNode from "../StatementNode.ts";
 
 class ReturnStatementNode extends StatementNode {
     public override readonly type = NodeType.ReturnStatement;

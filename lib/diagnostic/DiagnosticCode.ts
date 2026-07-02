@@ -9,5 +9,6 @@ export enum DiagnosticCode {
     InvalidUnaryExpressionOperand,
     ConflictingAccessModifiers,
     ModifierNotAllowed,
-    InvalidReturn
+    InvalidReturn,
+    IllegalAssignment
 }
