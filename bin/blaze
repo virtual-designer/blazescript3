@@ -10,10 +10,20 @@ if test $# -ne 1; then
 fi
 
 input_file="$1"
-output_file_base=`printf "%s" "${input_file}" | rev | cut -d. -f2- | rev`
-output_file="${output_file_base}.js"
 
-set -e
+case "$input_file" in
+    *.js)
+        output_file="$input_file"
+        ;;
 
-"${dir}/blazec" "${input_file}" -o "${output_file}"
+    *)
+        output_file_base=`printf "%s" "${input_file}" | rev | cut -d. -f2- | rev`
+        output_file="${output_file_base}.js"
+
+        set -e
+
+        "${dir}/blazec" "${input_file}" -o "${output_file}"
+        ;;
+esac
+
 exec node --require "${abs_dir}/../lib/stdlib/index.cjs" "${output_file}"

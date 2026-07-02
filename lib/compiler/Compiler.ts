@@ -1,4 +1,5 @@
-import { readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
 import SemanticAnalyzer from "../analysis/SemanticAnalyzer.ts";
 import CodeGenerator from "../codegen/CodeGenerator.ts";
 import { DiagnosticCode } from "../diagnostic/DiagnosticCode.ts";
@@ -10,7 +11,7 @@ import Parser from "../frontend/parser/Parser.ts";
 import ParserError from "../frontend/parser/ParserError.ts";
 import type RootNode from "../frontend/tree/RootNode.ts";
 import Transformer from "../transformer/Transformer.ts";
-import type { CompilerTransaction } from "./CompilerTransaction.ts";
+import type CompilerTransaction from "./CompilerTransaction.ts";
 
 class Compiler {
     protected readonly tokenizer = new Tokenizer();
@@ -21,10 +22,12 @@ class Compiler {
     protected readonly diagnosticPrinter = new DiagnosticPrinter();
 
     public async accept(tx: CompilerTransaction): Promise<string | undefined> {
-        const rootNodes: RootNode[] = [];
-        const inputSources = [...(tx.inputSources ?? [])];
+        tx.validate();
 
-        for (const filename of tx.inputFiles ?? []) {
+        const rootNodes: RootNode[] = [];
+        const inputSources = [...(tx.getInputSources() ?? [])];
+
+        for (const filename of tx.getInputFiles() ?? []) {
             inputSources.push({
                 filename,
                 data: await readFile(filename, "utf8")
@@ -66,7 +69,7 @@ class Compiler {
             return void this.end();
         }
 
-        if (tx.debugMode) {
+        if (tx.isDebugMode()) {
             console.dir(rootNodes, {
                 depth: Infinity
             });
@@ -81,14 +84,19 @@ class Compiler {
                 this.diagnosticPrinter.print(...diagnostics);
             }
 
-            compiledJSNodes.push(this.transformer.transformStatement(rootNode));
+            compiledJSNodes.push(
+                this.transformer.transformStatement(rootNode, {
+                    tx,
+                    currentFile: rootNode.location.filename
+                })
+            );
         }
 
         if (this.diagnosticPrinter.hasErrors()) {
             return void this.end();
         }
 
-        if (tx.debugMode) {
+        if (tx.isDebugMode()) {
             console.log("Compilation finished:");
             console.dir(compiledJSNodes, { depth: Infinity });
         }
@@ -97,8 +105,15 @@ class Compiler {
             .map(node => this.generator.generate(node))
             .join("\n");
 
-        if (tx.outputFile) {
-            await writeFile(tx.outputFile, generatedCodeString, "utf8");
+        const outputFile = tx.getOutputFile();
+
+        if (outputFile) {
+            if (tx.isMkdirAllowed()) {
+                const dir = path.dirname(outputFile);
+                await mkdir(dir, { recursive: true });
+            }
+
+            await writeFile(outputFile, generatedCodeString, "utf8");
         }
 
         this.end();

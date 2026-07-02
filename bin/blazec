@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 // @ts-nocheck
 
+import chalk from "chalk";
+import path from "node:path";
+import { exit } from "node:process";
 import { parseArgs } from "node:util";
 import Compiler from "../lib/compiler/Compiler.ts";
-import CompilerTransactionBuilder from "../lib/compiler/CompilerTransactionBuilder.ts";
-import { exit } from "node:process";
-import path from "node:path";
-import chalk from "chalk";
+import CompilerTransaction from "../lib/compiler/CompilerTransaction.ts";
 
 const argv0 = path.basename(process.argv[1]);
 
@@ -31,6 +31,14 @@ try {
             output: {
                 type: "string",
                 short: "o"
+            },
+            makepath: {
+                type: "boolean",
+                short: "M"
+            },
+            classpath: {
+                type: "string",
+                short: "C"
             }
         }
     });
@@ -63,11 +71,15 @@ if (values.help) {
 }
 
 const compiler = new Compiler();
-const tx = new CompilerTransactionBuilder()
+const tx = new CompilerTransaction()
     .addInputFiles(...positionals)
     .setOutputFile(values.output ?? "out.js")
-    .build();
+    .setMkdirAllowed(values.makepath);
 
-if (await compiler.accept(tx) === undefined) {
+if (values.classpath) {
+    tx.addClassPaths(values.classpath);
+}
+
+if ((await compiler.accept(tx)) === undefined) {
     exit(1);
 }

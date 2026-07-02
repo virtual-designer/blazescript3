@@ -1,4 +1,7 @@
 import ESTree from "estree";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import type CompilerTransaction from "../compiler/CompilerTransaction.ts";
 import type AbstractNode from "../frontend/tree/AbstractNode.ts";
 import { AccessModifier } from "../frontend/tree/AccessModifier.ts";
 import type AssignmentExpressionNode from "../frontend/tree/AssignmentExpressionNode.ts";
@@ -30,6 +33,11 @@ import VariableDeclarationKind from "../frontend/tree/VariableDeclarationKind.ts
 import type VariableDeclarationNode from "../frontend/tree/VariableDeclarationNode.ts";
 import type WhileStatementNode from "../frontend/tree/WhileStatementNode.ts";
 
+export type TransformerContext = {
+    tx: CompilerTransaction;
+    currentFile: string;
+};
+
 class Transformer {
     private readonly BLAZE_GLOBAL_SYMBOL = "__blaze";
 
@@ -38,44 +46,66 @@ class Transformer {
         return `t${prefix}${rand}${suffix}`;
     }
 
-    public transformStatement(node: AbstractNode): ESTree.BaseNode {
+    public transformStatement(
+        node: AbstractNode,
+        context: TransformerContext
+    ): ESTree.BaseNode {
         switch (node.type) {
             case NodeType.Root:
-                return this.transformRoot(node as RootNode);
+                return this.transformRoot(node as RootNode, context);
 
             case NodeType.VariableDeclaration:
                 return this.transformVariableDeclaration(
-                    node as VariableDeclarationNode
+                    node as VariableDeclarationNode,
+                    context
                 );
 
             case NodeType.FunctionDeclaration:
                 return this.transformFunctionDeclaration(
-                    node as FunctionDeclarationNode
+                    node as FunctionDeclarationNode,
+                    context
                 );
 
             case NodeType.IfStatement:
-                return this.transformIfStatement(node as IfStatementNode);
+                return this.transformIfStatement(
+                    node as IfStatementNode,
+                    context
+                );
 
             case NodeType.ForStatement:
-                return this.transformForStatement(node as ForStatementNode);
+                return this.transformForStatement(
+                    node as ForStatementNode,
+                    context
+                );
 
             case NodeType.ForInStatement:
-                return this.transformForInStatement(node as ForInStatementNode);
+                return this.transformForInStatement(
+                    node as ForInStatementNode,
+                    context
+                );
 
             case NodeType.WhileStatement:
-                return this.transformWhileStatement(node as WhileStatementNode);
+                return this.transformWhileStatement(
+                    node as WhileStatementNode,
+                    context
+                );
 
             case NodeType.BlockStatement:
-                return this.transformBlockStatement(node as BlockStatementNode);
+                return this.transformBlockStatement(
+                    node as BlockStatementNode,
+                    context
+                );
 
             case NodeType.ReturnStatement:
                 return this.transformReturnStatement(
-                    node as ReturnStatementNode
+                    node as ReturnStatementNode,
+                    context
                 );
 
             case NodeType.ImportStatement:
                 return this.transformImportStatement(
-                    node as ImportStatementNode
+                    node as ImportStatementNode,
+                    context
                 );
 
             case NodeType.EmptyStatement:
@@ -87,51 +117,67 @@ class Transformer {
                     expression: this.transformExpression(
                         node instanceof ExpressionStatementNode
                             ? node.expression
-                            : node
+                            : node,
+                        context
                     )
                 } satisfies ESTree.ExpressionStatement as ESTree.BaseNode;
         }
     }
 
-    public transformExpression(node: AbstractNode): ESTree.Expression {
+    public transformExpression(
+        node: AbstractNode,
+        context: TransformerContext
+    ): ESTree.Expression {
         switch (node.type) {
             case NodeType.Literal:
-                return this.transformLiteral(node as LiteralNode);
+                return this.transformLiteral(node as LiteralNode, context);
 
             case NodeType.Identifier:
-                return this.transformIdentifier(node as IdentifierNode);
+                return this.transformIdentifier(
+                    node as IdentifierNode,
+                    context
+                );
 
             case NodeType.UnaryExpression:
                 return this.transformUnaryExpression(
-                    node as UnaryExpressionNode
+                    node as UnaryExpressionNode,
+                    context
                 );
 
             case NodeType.BinaryExpression:
                 return this.transformBinaryExpression(
-                    node as BinaryExpressionNode
+                    node as BinaryExpressionNode,
+                    context
                 );
 
             case NodeType.AssignmentExpression:
                 return this.transformAssignmentExpression(
-                    node as AssignmentExpressionNode
+                    node as AssignmentExpressionNode,
+                    context
                 );
 
             case NodeType.CallExpression:
-                return this.transformCallExpression(node as CallExpressionNode);
+                return this.transformCallExpression(
+                    node as CallExpressionNode,
+                    context
+                );
 
             case NodeType.MatchExpression:
                 return this.transformMatchExpression(
-                    node as MatchExpressionNode
+                    node as MatchExpressionNode,
+                    context
                 );
 
             case NodeType.RangeExpression:
                 return this.transformRangeExpression(
-                    node as RangeExpressionNode
+                    node as RangeExpressionNode,
+                    context
                 );
 
             case NodeType.AwaitExpression:
                 return this.transformAwaitExpression(
-                    node as AwaitExpressionNode
+                    node as AwaitExpressionNode,
+                    context
                 );
 
             default:
@@ -140,24 +186,58 @@ class Transformer {
     }
 
     protected transformImportStatement(
-        node: ImportStatementNode
+        node: ImportStatementNode,
+        context: TransformerContext
     ): ESTree.ImportDeclaration {
+        let filepath = [
+            ...node.path.map(id => id.symbol),
+            `${node.identifier.symbol}.js`
+        ].join("/");
+
+        let sourceFilePath = [
+            ...node.path.map(id => id.symbol),
+            `${node.identifier.symbol}.bl`
+        ].join("/");
+
+        let sourceClasspath = "";
+
+        for (const classpath of ["", ...context.tx.getClassPaths()]) {
+            const fullpath = path.join(classpath, sourceFilePath);
+
+            if (!existsSync(fullpath)) {
+                continue;
+            }
+
+            sourceClasspath = classpath;
+            break;
+        }
+
+        const sourcePackageWithClassPath = path.dirname(
+            context.currentFile.startsWith(sourceClasspath)
+                ? context.currentFile
+                      .slice(sourceClasspath.length)
+                      .replaceAll(/^\/+/g, "")
+                : context.currentFile
+        );
+
+        filepath = filepath.startsWith(sourcePackageWithClassPath)
+            ? filepath
+                  .slice(sourcePackageWithClassPath.length)
+                  .replaceAll(/^\/+/g, "")
+            : filepath;
+        filepath = filepath.startsWith("/") ? filepath : "./" + filepath;
+
         return {
             type: "ImportDeclaration",
             source: {
                 type: "Literal",
-                value:
-                    "./" +
-                    [
-                        ...node.path.map(id => id.symbol),
-                        `${node.identifier.symbol}.js`
-                    ].join("/")
+                value: filepath
             },
             specifiers: [
                 {
                     type: "ImportSpecifier",
-                    local: this.transformIdentifier(node.identifier),
-                    imported: this.transformIdentifier(node.identifier)
+                    local: this.transformIdentifier(node.identifier, context),
+                    imported: this.transformIdentifier(node.identifier, context)
                 }
             ],
             attributes: []
@@ -165,45 +245,55 @@ class Transformer {
     }
 
     protected transformReturnStatement(
-        node: ReturnStatementNode
+        node: ReturnStatementNode,
+        context: TransformerContext
     ): ESTree.ReturnStatement {
         return {
             type: "ReturnStatement",
             argument: node.value
-                ? this.transformExpression(node.value)
+                ? this.transformExpression(node.value, context)
                 : undefined
         };
     }
 
     protected transformBlockStatement(
-        node: BlockStatementNode
+        node: BlockStatementNode,
+        context: TransformerContext
     ): ESTree.BlockStatement {
         return {
             type: "BlockStatement",
-            body: node.children.map(this.transformBlockChild.bind(this))
+            body: node.children.map(c => this.transformBlockChild(c, context))
         };
     }
 
     protected transformForStatement(
-        node: ForStatementNode
+        node: ForStatementNode,
+        context: TransformerContext
     ): ESTree.ForStatement {
         return {
             type: "ForStatement",
             init: node.init
-                ? (this.transformStatement(node.init) as ESTree.ChainExpression)
+                ? (this.transformStatement(
+                      node.init,
+                      context
+                  ) as ESTree.ChainExpression)
                 : undefined,
             test: node.condition
-                ? this.transformExpression(node.condition)
+                ? this.transformExpression(node.condition, context)
                 : undefined,
             update: node.mutator
-                ? this.transformExpression(node.mutator)
+                ? this.transformExpression(node.mutator, context)
                 : undefined,
-            body: this.transformStatement(node.body) as ESTree.Statement
+            body: this.transformStatement(
+                node.body,
+                context
+            ) as ESTree.Statement
         };
     }
 
     protected transformRangeExpression(
-        node: RangeExpressionNode
+        node: RangeExpressionNode,
+        context: TransformerContext
     ): ESTree.Expression {
         return {
             type: "CallExpression",
@@ -230,8 +320,8 @@ class Transformer {
                 optional: false
             },
             arguments: [
-                this.transformExpression(node.from),
-                this.transformExpression(node.to),
+                this.transformExpression(node.from, context),
+                this.transformExpression(node.to, context),
                 {
                     type: "Literal",
                     value: node.fromInclusive
@@ -246,48 +336,65 @@ class Transformer {
     }
 
     protected transformForInStatement(
-        node: ForInStatementNode
+        node: ForInStatementNode,
+        context: TransformerContext
     ): ESTree.ForOfStatement {
         return {
             type: "ForOfStatement",
-            body: this.transformStatement(node.body) as ESTree.Statement,
+            body: this.transformStatement(
+                node.body,
+                context
+            ) as ESTree.Statement,
             await: false,
             left: this.transformVariableDeclaration(
-                node.variable
+                node.variable,
+                context
             ) as ESTree.VariableDeclaration,
-            right: this.transformExpression(node.iterable)
+            right: this.transformExpression(node.iterable, context)
         };
     }
 
     protected transformWhileStatement(
-        node: WhileStatementNode
+        node: WhileStatementNode,
+        context: TransformerContext
     ): ESTree.WhileStatement {
         return {
             type: "WhileStatement",
-            test: this.transformExpression(node.condition),
-            body: this.transformStatement(node.body) as ESTree.Statement
+            test: this.transformExpression(node.condition, context),
+            body: this.transformStatement(
+                node.body,
+                context
+            ) as ESTree.Statement
         };
     }
 
-    protected transformIfStatement(node: IfStatementNode): ESTree.IfStatement {
+    protected transformIfStatement(
+        node: IfStatementNode,
+        context: TransformerContext
+    ): ESTree.IfStatement {
         return {
             type: "IfStatement",
-            test: this.transformExpression(node.condition),
+            test: this.transformExpression(node.condition, context),
             consequent: this.transformStatement(
-                node.thenBlock
+                node.thenBlock,
+                context
             ) as ESTree.Statement,
             alternate: node.elseBlock
-                ? (this.transformStatement(node.elseBlock) as ESTree.Statement)
+                ? (this.transformStatement(
+                      node.elseBlock,
+                      context
+                  ) as ESTree.Statement)
                 : undefined
         };
     }
 
     protected transformAwaitExpression(
-        node: AwaitExpressionNode
+        node: AwaitExpressionNode,
+        context: TransformerContext
     ): ESTree.AwaitExpression {
         return {
             type: "AwaitExpression",
-            argument: this.transformExpression(node.operand)
+            argument: this.transformExpression(node.operand, context)
         };
     }
 
@@ -326,7 +433,8 @@ class Transformer {
     }
 
     protected transformMatchExpression(
-        node: MatchExpressionNode
+        node: MatchExpressionNode,
+        context: TransformerContext
     ): ESTree.Expression {
         const subjectVarName = this.randomSymbolName("_subject");
         const body: ESTree.Statement[] = [];
@@ -349,13 +457,17 @@ class Transformer {
                 for (const equalCase of equalCaseStack) {
                     const consequent: ESTree.Statement = {
                         type: "ReturnStatement",
-                        argument: this.transformExpression(equalCase.body)
+                        argument: this.transformExpression(
+                            equalCase.body,
+                            context
+                        )
                     };
 
                     cases.push({
                         type: "SwitchCase",
                         test: this.transformExpression(
-                            equalCase.comparisonTarget!
+                            equalCase.comparisonTarget!,
+                            context
                         ),
                         consequent: [consequent]
                     });
@@ -377,7 +489,10 @@ class Transformer {
                 case MatchExpressionCaseKind.Default:
                     body.push({
                         type: "ReturnStatement",
-                        argument: this.transformExpression(definedCase.body)
+                        argument: this.transformExpression(
+                            definedCase.body,
+                            context
+                        )
                     });
 
                     break;
@@ -394,13 +509,15 @@ class Transformer {
                                     name: subjectVarName
                                 },
                                 this.transformExpression(
-                                    definedCase.comparisonTarget!
+                                    definedCase.comparisonTarget!,
+                                    context
                                 )
                             ),
                             consequent: {
                                 type: "ReturnStatement",
                                 argument: this.transformExpression(
-                                    definedCase.body
+                                    definedCase.body,
+                                    context
                                 )
                             }
                         };
@@ -409,7 +526,8 @@ class Transformer {
                             cond = {
                                 type: "IfStatement",
                                 test: this.transformExpression(
-                                    definedCase.condition
+                                    definedCase.condition,
+                                    context
                                 ),
                                 consequent: cond
                             };
@@ -441,39 +559,50 @@ class Transformer {
                     body
                 }
             },
-            arguments: [this.transformExpression(node.subject)],
+            arguments: [this.transformExpression(node.subject, context)],
             optional: false
         };
     }
 
     protected transformCallExpression(
-        node: CallExpressionNode
+        node: CallExpressionNode,
+        context: TransformerContext
     ): ESTree.CallExpression {
         return {
             type: "CallExpression",
-            callee: this.transformExpression(node.callee),
-            arguments: node.args.map(arg => this.transformExpression(arg)),
+            callee: this.transformExpression(node.callee, context),
+            arguments: node.args.map(arg =>
+                this.transformExpression(arg, context)
+            ),
             optional: false
         };
     }
 
     protected transformFunctionDeclaration(
-        node: FunctionDeclarationNode
+        node: FunctionDeclarationNode,
+        context: TransformerContext
     ): ESTree.FunctionDeclaration | ESTree.ExportNamedDeclaration {
         const functionDeclaration: ESTree.FunctionDeclaration = {
             type: "FunctionDeclaration",
-            body: this.transformBlockStatement(node.body),
-            id: this.transformIdentifier(node.identifier),
+            body: this.transformBlockStatement(node.body, context),
+            id: this.transformIdentifier(node.identifier, context),
             params: node.parameters.map(
                 p =>
                     (p.defaultValue
                         ? {
                               type: "AssignmentPattern",
-                              left: this.transformIdentifier(p.identifier),
-                              right: this.transformExpression(p.defaultValue)
+                              left: this.transformIdentifier(
+                                  p.identifier,
+                                  context
+                              ),
+                              right: this.transformExpression(
+                                  p.defaultValue,
+                                  context
+                              )
                           }
                         : this.transformIdentifier(
-                              p.identifier
+                              p.identifier,
+                              context
                           )) satisfies ESTree.FunctionDeclaration["params"][number]
             ),
             async:
@@ -492,7 +621,8 @@ class Transformer {
     }
 
     protected transformVariableDeclaration(
-        node: VariableDeclarationNode
+        node: VariableDeclarationNode,
+        context: TransformerContext
     ): ESTree.VariableDeclaration | ESTree.ExportNamedDeclaration {
         const variableDeclaration: ESTree.VariableDeclaration = {
             type: "VariableDeclaration",
@@ -500,10 +630,11 @@ class Transformer {
             declarations: [
                 {
                     type: "VariableDeclarator",
-                    id: this.transformIdentifier(node.identifier),
+                    id: this.transformIdentifier(node.identifier, context),
                     init: node.value
                         ? (this.transformExpression(
-                              node.value
+                              node.value,
+                              context
                           ) as ESTree.Expression)
                         : undefined
                 }
@@ -532,33 +663,43 @@ class Transformer {
     }
 
     protected transformAssignmentExpression(
-        node: AssignmentExpressionNode
+        node: AssignmentExpressionNode,
+        context: TransformerContext
     ): ESTree.AssignmentExpression {
         return {
             type: "AssignmentExpression",
-            left: this.transformExpression(node.left) as ESTree.Pattern,
-            right: this.transformExpression(node.right) as ESTree.Expression,
+            left: this.transformExpression(
+                node.left,
+                context
+            ) as ESTree.Pattern,
+            right: this.transformExpression(
+                node.right,
+                context
+            ) as ESTree.Expression,
             operator: node.operator as ESTree.AssignmentOperator
         };
     }
 
     protected transformBinaryExpression(
-        node: BinaryExpressionNode
+        node: BinaryExpressionNode,
+        context: TransformerContext
     ): ESTree.BinaryExpression {
         return this.transformJSBinaryOperation(
             node.operator,
-            this.transformExpression(node.left),
-            this.transformExpression(node.right)
+            this.transformExpression(node.left, context),
+            this.transformExpression(node.right, context)
         );
     }
 
     protected transformUnaryExpression(
-        node: UnaryExpressionNode
+        node: UnaryExpressionNode,
+        context: TransformerContext
     ): ESTree.UnaryExpression {
         return {
             type: "UnaryExpression",
             argument: this.transformExpression(
-                node.operand
+                node.operand,
+                context
             ) as ESTree.Expression,
             prefix: (node.kind === UnaryExpressionKind.Prefix
                 ? true
@@ -567,22 +708,31 @@ class Transformer {
         };
     }
 
-    protected transformIdentifier(node: IdentifierNode): ESTree.Identifier {
+    protected transformIdentifier(
+        node: IdentifierNode,
+        _context: TransformerContext
+    ): ESTree.Identifier {
         return {
             type: "Identifier",
             name: node.symbol
         };
     }
 
-    protected transformLiteral(node: LiteralNode): ESTree.Literal {
+    protected transformLiteral(
+        node: LiteralNode,
+        _context: TransformerContext
+    ): ESTree.Literal {
         return {
             type: "Literal",
             value: node.getJSValue()
         };
     }
 
-    protected transformBlockChild(node: AbstractNode): ESTree.Statement {
-        const esNode = this.transformStatement(node);
+    protected transformBlockChild(
+        node: AbstractNode,
+        context: TransformerContext
+    ): ESTree.Statement {
+        const esNode = this.transformStatement(node, context);
 
         if (node instanceof ExpressionNode) {
             return {
@@ -594,11 +744,14 @@ class Transformer {
         return esNode as ESTree.Statement;
     }
 
-    protected transformRoot(node: RootNode): ESTree.Program {
+    protected transformRoot(
+        node: RootNode,
+        context: TransformerContext
+    ): ESTree.Program {
         return {
             type: "Program",
             sourceType: "script",
-            body: node.children.map(this.transformBlockChild.bind(this))
+            body: node.children.map(c => this.transformBlockChild(c, context))
         };
     }
 }
