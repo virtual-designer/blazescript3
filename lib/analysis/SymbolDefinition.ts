@@ -1,4 +1,5 @@
 import type AbstractNode from "../frontend/tree/AbstractNode.ts";
+import type IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
 
 export abstract class SymbolDefinition {
     public readonly node: AbstractNode;
@@ -20,4 +21,6 @@ export abstract class SymbolDefinition {
     public getSymbolLocation() {
         return this.node.location;
     }
+
+    public abstract getIdentifier(): IdentifierNode;
 }

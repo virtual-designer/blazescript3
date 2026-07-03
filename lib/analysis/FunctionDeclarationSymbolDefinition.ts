@@ -1,4 +1,5 @@
 import type FunctionDeclarationNode from "../frontend/tree/declarations/FunctionDeclarationNode.ts";
+import type IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
 import { SymbolDefinition } from "./SymbolDefinition.ts";
 
 export class FunctionDeclarationSymbolDefinition extends SymbolDefinition {
@@ -11,5 +12,9 @@ export class FunctionDeclarationSymbolDefinition extends SymbolDefinition {
 
     public override getSymbolLocation() {
         return this.node.identifier.location;
+    }
+
+    public override getIdentifier(): IdentifierNode {
+        return this.node.identifier;
     }
 }

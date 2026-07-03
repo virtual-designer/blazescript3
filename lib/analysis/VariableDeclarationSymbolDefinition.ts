@@ -1,4 +1,5 @@
 import type VariableDeclarationNode from "../frontend/tree/declarations/VariableDeclarationNode.ts";
+import type IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
 import { SymbolDefinition } from "./SymbolDefinition.ts";
 
 export class VariableDeclarationSymbolDefinition extends SymbolDefinition {
@@ -31,5 +32,9 @@ export class VariableDeclarationSymbolDefinition extends SymbolDefinition {
 
     public override getSymbolLocation() {
         return this.node.identifier.location;
+    }
+
+    public override getIdentifier(): IdentifierNode {
+        return this.node.identifier;
     }
 }
