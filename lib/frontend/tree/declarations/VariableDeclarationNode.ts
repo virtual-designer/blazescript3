@@ -1,3 +1,4 @@
+import type Token from "../../lexer/Token.ts";
 import type AbstractNode from "../AbstractNode.ts";
 import DeclarationNode from "../DeclarationNode.ts";
 import type ExpressionNode from "../ExpressionNode.ts";
@@ -14,6 +15,7 @@ class VariableDeclarationNode extends DeclarationNode {
     public readonly identifier: IdentifierNode;
     public readonly annotatedType?: TypeExpressionNode;
     public readonly accessModifier: AccessModifier | null;
+    public readonly accessModifierToken: Token | null;
     public readonly value?: ExpressionNode;
     public readonly inline: boolean;
 
@@ -22,6 +24,7 @@ class VariableDeclarationNode extends DeclarationNode {
         identifier: IdentifierNode,
         annotatedType: TypeExpressionNode | undefined,
         accessModifier: AccessModifier | null,
+        accessModifierToken: Token | null,
         value: ExpressionNode | undefined,
         inline = false,
         location: Location
@@ -31,6 +34,7 @@ class VariableDeclarationNode extends DeclarationNode {
         this.identifier = identifier;
         this.annotatedType = annotatedType;
         this.accessModifier = accessModifier;
+        this.accessModifierToken = accessModifierToken;
         this.inline = inline;
         this.value = value;
     }

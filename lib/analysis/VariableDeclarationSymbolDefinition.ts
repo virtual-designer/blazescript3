@@ -1,3 +1,4 @@
+import { AccessModifier } from "../frontend/tree/declarations/AccessModifier.ts";
 import type VariableDeclarationNode from "../frontend/tree/declarations/VariableDeclarationNode.ts";
 import type IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
 import { SymbolDefinition } from "./SymbolDefinition.ts";
@@ -36,5 +37,12 @@ export class VariableDeclarationSymbolDefinition extends SymbolDefinition {
 
     public override getIdentifier(): IdentifierNode {
         return this.node.identifier;
+    }
+
+    public override hasExportLinkage(): boolean {
+        return (
+            this.node.accessModifier === AccessModifier.Public ||
+            this.node.accessModifier === AccessModifier.Internal
+        );
     }
 }

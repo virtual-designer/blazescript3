@@ -1,0 +1,79 @@
+import ESTree from "estree";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import ImportStatementNode from "../../frontend/tree/statements/ImportStatementNode.ts";
+import { ESTreeEmitter } from "../ESTreeEmitter.ts";
+import type { TransformerContext } from "../TransfomerContext.ts";
+import IdentifierEmitter from "./IdentifierEmitter.ts";
+
+class ImportStatementEmitter extends ESTreeEmitter<
+    ImportStatementNode,
+    ESTree.ImportDeclaration
+> {
+    public override readonly NODE_TYPE = ImportStatementNode;
+
+    public override emit(
+        node: ImportStatementNode,
+        context: TransformerContext
+    ): ESTree.ImportDeclaration {
+        let filepath = [
+            ...node.path.map(id => id.symbol),
+            `${node.identifier.symbol}.js`
+        ].join("/");
+
+        let sourceFilePath = [
+            ...node.path.map(id => id.symbol),
+            `${node.identifier.symbol}.bl`
+        ].join("/");
+
+        let sourceClasspath = "";
+
+        for (const classpath of ["", ...context.transaction.getClassPaths()]) {
+            const fullpath = path.join(classpath, sourceFilePath);
+
+            if (!existsSync(fullpath)) {
+                continue;
+            }
+
+            sourceClasspath = classpath;
+            break;
+        }
+
+        const sourcePackageWithClassPath = path.dirname(
+            context.currentFile.startsWith(sourceClasspath)
+                ? context.currentFile
+                      .slice(sourceClasspath.length)
+                      .replaceAll(/^\/+/g, "")
+                : context.currentFile
+        );
+
+        filepath = filepath.startsWith(sourcePackageWithClassPath)
+            ? filepath
+                  .slice(sourcePackageWithClassPath.length)
+                  .replaceAll(/^\/+/g, "")
+            : filepath;
+        filepath = filepath.startsWith("/") ? filepath : "./" + filepath;
+
+        return {
+            type: "ImportDeclaration",
+            source: {
+                type: "Literal",
+                value: filepath
+            },
+            specifiers: [
+                {
+                    type: "ImportSpecifier",
+                    local: this.transformer
+                        .getEmitter(IdentifierEmitter)
+                        .emit(node.identifier, context),
+                    imported: this.transformer
+                        .getEmitter(IdentifierEmitter)
+                        .emit(node.identifier, context)
+                }
+            ],
+            attributes: []
+        };
+    }
+}
+
+export default ImportStatementEmitter;

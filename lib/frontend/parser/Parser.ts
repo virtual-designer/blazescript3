@@ -774,7 +774,7 @@ class Parser {
                         modifiersTokens[token.type].value !== token.value;
 
                     this.diagnostic({
-                        code: DiagnosticCode.ConflictingAccessModifiers,
+                        code: DiagnosticCode.ConflictingModifiers,
                         level: DiagnosticLevel.Error,
                         message: `${isConflicting ? "Conflicting" : "Duplicate"} modifier '${token.value}'`,
                         location: token.location
@@ -791,20 +791,31 @@ class Parser {
         let modifiers: FunctionDeclarationModifier =
             FunctionDeclarationModifier.None;
 
+        const functionModifierTokenRecord: Partial<
+            Record<FunctionDeclarationModifier, Token>
+        > = Object.create(null);
+
         for (const key in modifiersTokens) {
+            let modifier;
+
             switch (+key) {
                 case TokenType.Async:
-                    modifiers |= FunctionDeclarationModifier.Async;
+                    modifier = FunctionDeclarationModifier.Async;
                     break;
 
                 default:
                     throw new Error("Invalid state");
             }
+
+            modifiers |= modifier;
+            functionModifierTokenRecord[modifier] =
+                modifiersTokens[+key as keyof typeof modifiersTokens];
         }
 
         return {
             functionModifiers: modifiers,
-            functionModifierTokens: Object.values(modifiersTokens)
+            functionModifierTokens: Object.values(modifiersTokens),
+            functionModifierTokenRecord
         };
     }
 
@@ -825,7 +836,7 @@ class Parser {
                         accessModifierToken.location.start[0]
                     ) {
                         this.pushDiagnostic({
-                            code: DiagnosticCode.ConflictingAccessModifiers,
+                            code: DiagnosticCode.ConflictingModifiers,
                             level: DiagnosticLevel.Note,
                             message: "Previous modifier applied here",
                             location: accessModifierToken.location
@@ -833,7 +844,7 @@ class Parser {
                     }
 
                     this.diagnostic({
-                        code: DiagnosticCode.ConflictingAccessModifiers,
+                        code: DiagnosticCode.ConflictingModifiers,
                         level: DiagnosticLevel.Error,
                         message: `${token.value === accessModifierToken.value ? "Duplicate" : "Conflicting"} access modifier '${token.value}'`,
                         location: token.location,
@@ -884,8 +895,11 @@ class Parser {
     ): FunctionDeclarationNode {
         const { accessModifier, accessModifierTokens } =
             this.parseDeclarationAccessModifiers(context);
-        const { functionModifiers, functionModifierTokens } =
-            this.parseFunctionDeclarationModifiers(context);
+        const {
+            functionModifiers,
+            functionModifierTokens,
+            functionModifierTokenRecord
+        } = this.parseFunctionDeclarationModifiers(context);
 
         context.assertStackEmpty();
 
@@ -951,7 +965,9 @@ class Parser {
             returnType,
             parameters,
             accessModifier,
+            accessModifierTokens[0] ?? null,
             functionModifiers,
+            functionModifierTokenRecord,
             body,
             this.combineLocations(
                 ...accessModifierTokens,
@@ -1001,6 +1017,7 @@ class Parser {
             new IdentifierNode(identifier.value, identifier.location),
             annotatedType,
             accessModifier,
+            accessModifierTokens[0] ?? null,
             value,
             inline,
             this.combineLocations(

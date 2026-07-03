@@ -1,3 +1,4 @@
+import { AccessModifier } from "../frontend/tree/declarations/AccessModifier.ts";
 import type FunctionDeclarationNode from "../frontend/tree/declarations/FunctionDeclarationNode.ts";
 import type IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
 import { SymbolDefinition } from "./SymbolDefinition.ts";
@@ -16,5 +17,12 @@ export class FunctionDeclarationSymbolDefinition extends SymbolDefinition {
 
     public override getIdentifier(): IdentifierNode {
         return this.node.identifier;
+    }
+
+    public override hasExportLinkage(): boolean {
+        return (
+            this.node.accessModifier === AccessModifier.Public ||
+            this.node.accessModifier === AccessModifier.Internal
+        );
     }
 }

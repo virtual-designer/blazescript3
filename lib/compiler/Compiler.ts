@@ -10,13 +10,13 @@ import Tokenizer from "../frontend/lexer/Tokenizer.ts";
 import Parser from "../frontend/parser/Parser.ts";
 import ParserError from "../frontend/parser/ParserError.ts";
 import type RootNode from "../frontend/tree/RootNode.ts";
-import Transformer from "../transformer/Transformer.ts";
+import NodeTransformer from "../transformer/NodeTransformer.ts";
 import type CompilerTransaction from "./CompilerTransaction.ts";
 
 class Compiler {
     protected readonly tokenizer = new Tokenizer();
     protected readonly parser = new Parser();
-    protected readonly transformer = new Transformer();
+    protected readonly transformer = new NodeTransformer();
     protected readonly generator = new CodeGenerator();
     protected readonly analyzer = new SemanticAnalyzer();
     protected readonly diagnosticPrinter = new DiagnosticPrinter();
@@ -83,17 +83,19 @@ class Compiler {
             if (diagnostics.length) {
                 this.diagnosticPrinter.print(...diagnostics);
             }
-
-            compiledJSNodes.push(
-                this.transformer.transformStatement(rootNode, {
-                    tx,
-                    currentFile: rootNode.location.filename
-                })
-            );
         }
 
         if (this.diagnosticPrinter.hasErrors()) {
             return void this.end();
+        }
+
+        for (const rootNode of rootNodes) {
+            compiledJSNodes.push(
+                this.transformer.transformStatement(rootNode, {
+                    transaction: tx,
+                    currentFile: rootNode.location.filename
+                })
+            );
         }
 
         if (tx.isDebugMode()) {

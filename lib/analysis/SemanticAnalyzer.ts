@@ -3,6 +3,7 @@ import type { Diagnostic } from "../diagnostic/Diagnostic.ts";
 import { DiagnosticCode } from "../diagnostic/DiagnosticCode.ts";
 import { DiagnosticLevel } from "../diagnostic/DiagnosticLevel.ts";
 import type AbstractNode from "../frontend/tree/AbstractNode.ts";
+import { AccessModifier } from "../frontend/tree/declarations/AccessModifier.ts";
 import VariableDeclarationKind from "../frontend/tree/declarations/VariableDeclarationKind.ts";
 import VariableDeclarationNode from "../frontend/tree/declarations/VariableDeclarationNode.ts";
 import IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
@@ -124,9 +125,25 @@ class SemanticAnalyzer {
                 if (scope.parent !== null && node.accessModifier !== null) {
                     diagnostics.push({
                         message: `Modifiers are not allowed for block-scoped identifier '${node.identifier.symbol}'`,
-                        code: DiagnosticCode.ModifierNotAllowed,
+                        code: DiagnosticCode.ModifiersNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location: node.identifier.location
+                        location:
+                            node.accessModifierToken?.location ??
+                            node.identifier.location
+                    });
+                } else if (
+                    node.accessModifier &&
+                    node.accessModifier !== AccessModifier.Public &&
+                    node.accessModifier !== AccessModifier.Private &&
+                    node.accessModifier !== AccessModifier.Internal
+                ) {
+                    diagnostics.push({
+                        message: `Modifier '${node.accessModifier}' is not applicable for '${node.identifier.symbol}'`,
+                        code: DiagnosticCode.ModifierNotApplicable,
+                        level: DiagnosticLevel.Error,
+                        location:
+                            node.accessModifierToken?.location ??
+                            node.identifier.location
                     });
                 }
 
@@ -201,9 +218,11 @@ class SemanticAnalyzer {
                 if (node.variable.accessModifier !== null) {
                     diagnostics.push({
                         message: `Modifiers are not allowed for '${node.variable.identifier.symbol}'`,
-                        code: DiagnosticCode.ModifierNotAllowed,
+                        code: DiagnosticCode.ModifiersNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location: node.variable.identifier.location
+                        location:
+                            node.variable.accessModifierToken?.location ??
+                            node.variable.identifier.location
                     });
                 }
             },
@@ -214,9 +233,11 @@ class SemanticAnalyzer {
                 ) {
                     diagnostics.push({
                         message: `Modifiers are not allowed for '${node.init.identifier.symbol}'`,
-                        code: DiagnosticCode.ModifierNotAllowed,
+                        code: DiagnosticCode.ModifiersNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location: node.init.identifier.location
+                        location:
+                            node.init.accessModifierToken?.location ??
+                            node.init.identifier.location
                     });
                 }
             },
@@ -249,9 +270,11 @@ class SemanticAnalyzer {
                 if (scope.parent !== null && node.accessModifier !== null) {
                     diagnostics.push({
                         message: `Modifiers are not allowed for block-scoped identifier '${node.identifier.symbol}'`,
-                        code: DiagnosticCode.ModifierNotAllowed,
+                        code: DiagnosticCode.ModifiersNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location: node.identifier.location
+                        location:
+                            node.accessModifierToken?.location ??
+                            node.identifier.location
                     });
                 }
 
@@ -278,7 +301,10 @@ class SemanticAnalyzer {
 
         this.traverseScope(globalScope, scope => {
             for (const [symbolName, symbolDefinition] of scope.symbolTable) {
-                if (symbolDefinition.hits < 1) {
+                if (
+                    symbolDefinition.hits < 1 &&
+                    !symbolDefinition.hasExportLinkage()
+                ) {
                     diagnostics.push({
                         message: `'${symbolName}' is never used`,
                         code: DiagnosticCode.Unused,

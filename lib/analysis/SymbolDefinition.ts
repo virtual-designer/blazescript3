@@ -23,4 +23,5 @@ export abstract class SymbolDefinition {
     }
 
     public abstract getIdentifier(): IdentifierNode;
+    public abstract hasExportLinkage(): boolean;
 }
