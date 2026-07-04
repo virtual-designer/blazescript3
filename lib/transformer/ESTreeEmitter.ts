@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import type AbstractNode from "../frontend/tree/AbstractNode.ts";
 import type NodeTransformer from "./NodeTransformer.ts";
-import type { TransformerContext } from "./TransfomerContext.ts";
+import type { TransformerContext } from "./TransformerContext.ts";
 
 export abstract class ESTreeEmitter<
     S extends AbstractNode,

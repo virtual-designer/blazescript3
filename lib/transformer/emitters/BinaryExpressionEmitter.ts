@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import BinaryExpressionNode from "../../frontend/tree/expressions/BinaryExpressionNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class BinaryExpressionEmitter extends ESTreeEmitter<
     BinaryExpressionNode,

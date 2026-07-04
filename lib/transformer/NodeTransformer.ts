@@ -27,7 +27,7 @@ import UnaryExpressionEmitter from "./emitters/UnaryExpressionEmitter.ts";
 import VariableDeclarationEmitter from "./emitters/VariableDeclarationEmitter.ts";
 import WhileStatementEmitter from "./emitters/WhileStatementEmitter.ts";
 import type { ESTreeEmitter } from "./ESTreeEmitter.ts";
-import type { TransformerContext } from "./TransfomerContext.ts";
+import type { TransformerContext } from "./TransformerContext.ts";
 
 type EmitterClass = new (
     transformer: NodeTransformer

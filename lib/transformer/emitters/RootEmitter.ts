@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import RootNode from "../../frontend/tree/RootNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class RootEmitter extends ESTreeEmitter<RootNode, ESTree.Program> {
     public override readonly NODE_TYPE = RootNode;

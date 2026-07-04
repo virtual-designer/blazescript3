@@ -3,7 +3,7 @@ import { AccessModifier } from "../../frontend/tree/declarations/AccessModifier.
 import VariableDeclarationKind from "../../frontend/tree/declarations/VariableDeclarationKind.ts";
 import VariableDeclarationNode from "../../frontend/tree/declarations/VariableDeclarationNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 import IdentifierEmitter from "./IdentifierEmitter.ts";
 
 class VariableDeclarationEmitter extends ESTreeEmitter<

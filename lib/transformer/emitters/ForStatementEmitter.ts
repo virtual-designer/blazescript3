@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import ForStatementNode from "../../frontend/tree/statements/ForStatementNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class ForStatementEmitter extends ESTreeEmitter<
     ForStatementNode,

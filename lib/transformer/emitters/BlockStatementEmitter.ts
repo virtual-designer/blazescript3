@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import BlockStatementNode from "../../frontend/tree/statements/BlockStatementNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class BlockStatementEmitter extends ESTreeEmitter<
     BlockStatementNode,

@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import IfStatementNode from "../../frontend/tree/statements/IfStatementNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class IfStatementEmitter extends ESTreeEmitter<
     IfStatementNode,

@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import CallExpressionNode from "../../frontend/tree/expressions/CallExpressionNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class CallExpressionEmitter extends ESTreeEmitter<
     CallExpressionNode,

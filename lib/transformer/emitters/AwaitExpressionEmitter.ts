@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import AwaitExpressionNode from "../../frontend/tree/expressions/AwaitExpressionNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class AwaitExpressionEmitter extends ESTreeEmitter<
     AwaitExpressionNode,

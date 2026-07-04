@@ -3,7 +3,7 @@ import { AccessModifier } from "../../frontend/tree/declarations/AccessModifier.
 import { FunctionDeclarationModifier } from "../../frontend/tree/declarations/FunctionDeclarationModifier.ts";
 import FunctionDeclarationNode from "../../frontend/tree/declarations/FunctionDeclarationNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 import BlockStatementEmitter from "./BlockStatementEmitter.ts";
 import IdentifierEmitter from "./IdentifierEmitter.ts";
 

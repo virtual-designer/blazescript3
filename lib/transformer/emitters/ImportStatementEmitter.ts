@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import ImportStatementNode from "../../frontend/tree/statements/ImportStatementNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 import IdentifierEmitter from "./IdentifierEmitter.ts";
 
 class ImportStatementEmitter extends ESTreeEmitter<

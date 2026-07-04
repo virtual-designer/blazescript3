@@ -5,7 +5,7 @@ import CodeGenerator from "../codegen/CodeGenerator.ts";
 import { DiagnosticCode } from "../diagnostic/DiagnosticCode.ts";
 import { DiagnosticLevel } from "../diagnostic/DiagnosticLevel.ts";
 import DiagnosticPrinter from "../diagnostic/DiagnosticPrinter.ts";
-import { isLocatableError } from "../diagnostic/LoctableError.ts";
+import { isLocatableError } from "../diagnostic/LocatableError.ts";
 import Tokenizer from "../frontend/lexer/Tokenizer.ts";
 import Parser from "../frontend/parser/Parser.ts";
 import ParserError from "../frontend/parser/ParserError.ts";

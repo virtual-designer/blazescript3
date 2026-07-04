@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import EmptyStatementNode from "../../frontend/tree/statements/EmptyStatementNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class EmptyStatementEmitter extends ESTreeEmitter<
     EmptyStatementNode,

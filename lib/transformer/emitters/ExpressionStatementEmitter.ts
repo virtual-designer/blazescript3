@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import ExpressionStatementNode from "../../frontend/tree/statements/ExpressionStatementNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class ExpressionStatementEmitter extends ESTreeEmitter<
     ExpressionStatementNode,

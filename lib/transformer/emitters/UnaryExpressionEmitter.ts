@@ -2,7 +2,7 @@ import ESTree from "estree";
 import { UnaryExpressionKind } from "../../frontend/tree/expressions/UnaryExpressionKind.ts";
 import UnaryExpressionNode from "../../frontend/tree/expressions/UnaryExpressionNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class UnaryExpressionEmitter extends ESTreeEmitter<
     UnaryExpressionNode,

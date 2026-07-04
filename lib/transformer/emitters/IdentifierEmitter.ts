@@ -1,7 +1,7 @@
 import ESTree from "estree";
 import IdentifierNode from "../../frontend/tree/expressions/IdentifierNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class IdentifierEmitter extends ESTreeEmitter<
     IdentifierNode,

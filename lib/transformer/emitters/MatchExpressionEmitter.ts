@@ -4,7 +4,7 @@ import type MatchExpressionCaseNode from "../../frontend/tree/expressions/MatchE
 import { MatchExpressionCaseKind } from "../../frontend/tree/expressions/MatchExpressionCaseNode.ts";
 import MatchExpressionNode from "../../frontend/tree/expressions/MatchExpressionNode.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
-import type { TransformerContext } from "../TransfomerContext.ts";
+import type { TransformerContext } from "../TransformerContext.ts";
 
 class MatchExpressionEmitter extends ESTreeEmitter<
     MatchExpressionNode,
