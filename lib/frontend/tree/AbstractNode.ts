@@ -35,7 +35,7 @@ abstract class AbstractNode {
         const callback = walker[this.type];
 
         if (callback) {
-            result = callback(this as never);
+            result = callback.call(walker, this as never);
             walker = { ...walker, ...result } as TreeWalker<this>;
         }
 

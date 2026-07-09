@@ -12,16 +12,16 @@ import type ModifierListNode from "./ModifierListNode.ts";
 class ClassDeclarationNode extends DeclarationNode {
     public override readonly type = NodeType.ClassDeclaration;
     public readonly kind: ClassKindNode;
-    public readonly accessModifier: AccessModifierNode;
-    public readonly modifiers: ModifierListNode<ClassModifier>;
+    public readonly accessModifier: AccessModifierNode | null;
+    public readonly modifiers: ModifierListNode<ClassModifier> | null;
     public readonly identifier: IdentifierNode;
     public readonly properties: Map<string, ClassPropertyDeclarationNode>;
     public readonly methods: Map<string, ClassMethodDeclarationNode>;
 
     public constructor(
         kind: ClassKindNode,
-        accessModifier: AccessModifierNode,
-        modifiers: ModifierListNode<ClassModifier>,
+        accessModifier: AccessModifierNode | null,
+        modifiers: ModifierListNode<ClassModifier> | null,
         identifier: IdentifierNode,
         properties: Map<string, ClassPropertyDeclarationNode>,
         methods: Map<string, ClassMethodDeclarationNode>,

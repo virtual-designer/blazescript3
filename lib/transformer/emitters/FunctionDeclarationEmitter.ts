@@ -19,12 +19,12 @@ class FunctionDeclarationEmitter extends ESTreeEmitter<
     ): ESTree.FunctionDeclaration | ESTree.ExportNamedDeclaration {
         const functionDeclaration: ESTree.FunctionDeclaration = {
             type: "FunctionDeclaration",
-            body: this.transformer
-                .getEmitter(BlockStatementEmitter)
-                .emit(node.body, context),
             id: this.transformer
                 .getEmitter(IdentifierEmitter)
                 .emit(node.identifier, context),
+            body: this.transformer
+                .getEmitter(BlockStatementEmitter)
+                .emit(node.body, context),
             params: node.parameters.map(
                 p =>
                     (p.defaultValue

@@ -10,6 +10,9 @@ import AwaitExpressionEmitter from "./emitters/AwaitExpressionEmitter.ts";
 import BinaryExpressionEmitter from "./emitters/BinaryExpressionEmitter.ts";
 import BlockStatementEmitter from "./emitters/BlockStatementEmitter.ts";
 import CallExpressionEmitter from "./emitters/CallExpressionEmitter.ts";
+import ClassDeclarationEmitter from "./emitters/ClassDeclarationEmitter.ts";
+import ClassMethodDeclarationEmitter from "./emitters/ClassMethodDeclarationEmitter.ts";
+import ClassPropertyDeclarationEmitter from "./emitters/ClassPropertyDeclarationEmitter.ts";
 import EmptyStatementEmitter from "./emitters/EmptyStatementEmitter.ts";
 import ExpressionStatementEmitter from "./emitters/ExpressionStatementEmitter.ts";
 import ForInStatementEmitter from "./emitters/ForInStatementEmitter.ts";
@@ -55,7 +58,10 @@ class NodeTransformer {
         RootEmitter,
         UnaryExpressionEmitter,
         VariableDeclarationEmitter,
-        WhileStatementEmitter
+        WhileStatementEmitter,
+        ClassDeclarationEmitter,
+        ClassPropertyDeclarationEmitter,
+        ClassMethodDeclarationEmitter
     ];
 
     private readonly emitterMap = new Map<

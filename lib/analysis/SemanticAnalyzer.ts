@@ -9,6 +9,7 @@ import VariableDeclarationNode from "../frontend/tree/declarations/VariableDecla
 import IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
 import UnaryOperator from "../frontend/tree/expressions/UnaryOperator.ts";
 import NodeType from "../frontend/tree/NodeType.ts";
+import type { TreeWalker } from "../frontend/tree/TreeWalker.ts";
 import TypeUtils from "../types/TypeUtils.ts";
 import { FunctionDeclarationSymbolDefinition } from "./FunctionDeclarationSymbolDefinition.ts";
 import { Scope } from "./Scope.ts";
@@ -82,7 +83,7 @@ class SemanticAnalyzer {
             return true;
         };
 
-        sourceNode.walk({
+        const walker: Readonly<TreeWalker<AbstractNode>> = {
             [NodeType.VariableDeclaration]: node => {
                 if (
                     node.kind.value !== VariableDeclarationKind.Let &&
@@ -277,6 +278,15 @@ class SemanticAnalyzer {
                     }
                 };
             },
+            [NodeType.ClassMethodDeclaration]: _node => {
+                functionScopeDepth++;
+
+                return {
+                    _cleanup: _ => {
+                        functionScopeDepth--;
+                    }
+                };
+            },
             [NodeType.ReturnStatement]: node => {
                 if (functionScopeDepth < 1) {
                     diagnostics.push({
@@ -287,7 +297,9 @@ class SemanticAnalyzer {
                     });
                 }
             }
-        });
+        };
+
+        sourceNode.walk(walker);
 
         this.traverseScope(globalScope, scope => {
             for (const [symbolName, symbolDefinition] of scope.symbolTable) {

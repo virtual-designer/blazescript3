@@ -1,4 +1,6 @@
 import ClassDeclarationNode from "./declarations/ClassDeclarationNode.ts";
+import ClassMethodDeclarationNode from "./declarations/ClassMethodDeclarationNode.ts";
+import ClassPropertyDeclarationNode from "./declarations/ClassPropertyDeclarationNode.ts";
 import FunctionDeclarationNode from "./declarations/FunctionDeclarationNode.ts";
 import FunctionParameterDeclarationNode from "./declarations/FunctionParameterDeclarationNode.ts";
 import VariableDeclarationNode from "./declarations/VariableDeclarationNode.ts";
@@ -48,7 +50,9 @@ export const NodeMap = {
     [NodeType.ReturnStatement]: ReturnStatementNode,
     [NodeType.ImportStatement]: ImportStatementNode,
     [NodeType.AssignmentExpression]: AssignmentExpressionNode,
-    [NodeType.ClassDeclaration]: ClassDeclarationNode
+    [NodeType.ClassDeclaration]: ClassDeclarationNode,
+    [NodeType.ClassPropertyDeclaration]: ClassPropertyDeclarationNode,
+    [NodeType.ClassMethodDeclaration]: ClassMethodDeclarationNode
 } as const;
 
 export type NodeMapType = {
