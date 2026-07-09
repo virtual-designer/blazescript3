@@ -58,7 +58,21 @@ enum TokenType {
     Await,
     Return,
     Import,
-    Spaceship
+    Spaceship,
+    Class,
+    Interface,
+    Trait,
+    Sealed,
+    Data,
+    Abstract,
+    Annotation,
+    Extends,
+    Implements,
+    Uses,
+    Permits,
+    Infix,
+    Out,
+    New
 }
 
 export default TokenType;

@@ -1,3 +1,4 @@
+import ClassDeclarationNode from "./declarations/ClassDeclarationNode.ts";
 import FunctionDeclarationNode from "./declarations/FunctionDeclarationNode.ts";
 import FunctionParameterDeclarationNode from "./declarations/FunctionParameterDeclarationNode.ts";
 import VariableDeclarationNode from "./declarations/VariableDeclarationNode.ts";
@@ -46,7 +47,8 @@ export const NodeMap = {
     [NodeType.AwaitExpression]: AwaitExpressionNode,
     [NodeType.ReturnStatement]: ReturnStatementNode,
     [NodeType.ImportStatement]: ImportStatementNode,
-    [NodeType.AssignmentExpression]: AssignmentExpressionNode
+    [NodeType.AssignmentExpression]: AssignmentExpressionNode,
+    [NodeType.ClassDeclaration]: ClassDeclarationNode
 } as const;
 
 export type NodeMapType = {

@@ -65,7 +65,21 @@ class Tokenizer {
         operator: TokenType.Operator,
         await: TokenType.Await,
         return: TokenType.Return,
-        import: TokenType.Import
+        import: TokenType.Import,
+        class: TokenType.Class,
+        interface: TokenType.Interface,
+        trait: TokenType.Trait,
+        sealed: TokenType.Sealed,
+        data: TokenType.Data,
+        abstract: TokenType.Abstract,
+        annotation: TokenType.Annotation,
+        extends: TokenType.Extends,
+        implements: TokenType.Implements,
+        uses: TokenType.Uses,
+        permits: TokenType.Permits,
+        infix: TokenType.Infix,
+        out: TokenType.Out,
+        new: TokenType.New
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);

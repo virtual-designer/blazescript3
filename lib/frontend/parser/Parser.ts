@@ -1028,6 +1028,10 @@ class Parser {
         );
     }
 
+    protected parseClassDeclaration(
+        context: ParserContext
+    ): VariableDeclarationNode {}
+
     protected parseReturnStatement(context: ParserContext): AbstractNode {
         const token = context.expect([TokenType.Return]);
         const expression =

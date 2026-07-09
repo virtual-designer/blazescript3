@@ -21,7 +21,11 @@ enum NodeType {
     AwaitExpression,
     ReturnStatement,
     ImportStatement,
-    AssignmentExpression
+    AssignmentExpression,
+    ClassDeclaration,
+    ClassPropertyDeclaration,
+    ClassMethodDeclaration,
+    ClassConstructorDeclaration
 }
 
 export default NodeType;
