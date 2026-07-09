@@ -32,8 +32,8 @@
                     "application/blazescript"
                 ],
                 "icon": {
-                    "light": "./logo.svg",
-                    "dark": "./logo.svg"
+                    "light": "./logo.png",
+                    "dark": "./logo.png"
                 }
             }
         ],
