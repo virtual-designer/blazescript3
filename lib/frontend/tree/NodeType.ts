@@ -25,7 +25,12 @@ enum NodeType {
     ClassDeclaration,
     ClassPropertyDeclaration,
     ClassMethodDeclaration,
-    ClassConstructorDeclaration
+    ClassConstructorDeclaration,
+    AccessModifierKeyword,
+    ModifierList,
+    VariableDeclarationKind,
+    ClassKind,
+    Keyword
 }
 
 export default NodeType;

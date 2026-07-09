@@ -46,13 +46,14 @@ class FunctionDeclarationEmitter extends ESTreeEmitter<
                               )) satisfies ESTree.FunctionDeclaration["params"][number]
             ),
             async:
-                (node.functionModifiers & FunctionDeclarationModifier.Async) ===
-                FunctionDeclarationModifier.Async
+                node.functionModifiers?.has(
+                    FunctionDeclarationModifier.Async
+                ) ?? false
         };
 
         if (
             node.accessModifier &&
-            node.accessModifier !== AccessModifier.Private
+            node.accessModifier.value !== AccessModifier.Private
         ) {
             return this.transformer.exportDeclaration(functionDeclaration);
         }

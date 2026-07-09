@@ -1,4 +1,4 @@
 export enum ClassKind {
     Annotation = "annotation",
-    Data = "data"
+    Record = "record"
 }

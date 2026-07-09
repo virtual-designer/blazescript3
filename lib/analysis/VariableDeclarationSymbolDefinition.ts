@@ -14,13 +14,13 @@ export class VariableDeclarationSymbolDefinition extends SymbolDefinition {
         hits: number
     ) {
         super(node, hits);
-        this.isInitialized = !!node.value;
+        this.isInitialized = !!node.defaultValue;
         this._isAssigned = isAssigned;
         this.node = node;
     }
 
     public get kind() {
-        return this.node.kind;
+        return this.node.kind.value;
     }
 
     public get isAssigned() {
@@ -41,8 +41,8 @@ export class VariableDeclarationSymbolDefinition extends SymbolDefinition {
 
     public override hasExportLinkage(): boolean {
         return (
-            this.node.accessModifier === AccessModifier.Public ||
-            this.node.accessModifier === AccessModifier.Internal
+            this.node.accessModifier?.value === AccessModifier.Public ||
+            this.node.accessModifier?.value === AccessModifier.Internal
         );
     }
 }

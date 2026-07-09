@@ -70,7 +70,7 @@ class Tokenizer {
         interface: TokenType.Interface,
         trait: TokenType.Trait,
         sealed: TokenType.Sealed,
-        data: TokenType.Data,
+        record: TokenType.Record,
         abstract: TokenType.Abstract,
         annotation: TokenType.Annotation,
         extends: TokenType.Extends,

@@ -5,11 +5,13 @@ import Token from "../lexer/Token.ts";
 import TokenType from "../lexer/TokenType.ts";
 import type AbstractNode from "../tree/AbstractNode.ts";
 import type DeclarationNode from "../tree/DeclarationNode.ts";
-import { AccessModifier } from "../tree/declarations/AccessModifier.ts";
+import AccessModifierNode from "../tree/declarations/AccessModifierNode.ts";
 import { FunctionDeclarationModifier } from "../tree/declarations/FunctionDeclarationModifier.ts";
 import FunctionDeclarationNode from "../tree/declarations/FunctionDeclarationNode.ts";
 import FunctionParameterDeclarationNode from "../tree/declarations/FunctionParameterDeclarationNode.ts";
+import ModifierListNode from "../tree/declarations/ModifierListNode.ts";
 import VariableDeclarationKind from "../tree/declarations/VariableDeclarationKind.ts";
+import VariableDeclarationKindNode from "../tree/declarations/VariableDeclarationKindNode.ts";
 import VariableDeclarationNode from "../tree/declarations/VariableDeclarationNode.ts";
 import type ExpressionNode from "../tree/ExpressionNode.ts";
 import AssignmentExpressionNode from "../tree/expressions/AssignmentExpressionNode.ts";
@@ -36,7 +38,7 @@ import type { TypeExpressionNode } from "../tree/expressions/TypeExpressionNode.
 import { UnaryExpressionKind } from "../tree/expressions/UnaryExpressionKind.ts";
 import UnaryExpressionNode from "../tree/expressions/UnaryExpressionNode.ts";
 import UnaryOperator from "../tree/expressions/UnaryOperator.ts";
-import type { Location } from "../tree/Location.ts";
+import { combineLocations, type Location } from "../tree/Location.ts";
 import NodeType from "../tree/NodeType.ts";
 import RootNode from "../tree/RootNode.ts";
 import BlockStatementNode from "../tree/statements/BlockStatementNode.ts";
@@ -77,7 +79,7 @@ class Parser {
         TokenType.Internal
     ];
 
-    protected readonly functionModifierTokens = [TokenType.Async];
+    protected readonly functionModifierTokens = [TokenType.Async] as const;
 
     protected readonly modifierTokens = [
         ...this.accessModifierTokens,
@@ -204,42 +206,7 @@ class Parser {
     protected combineLocations(
         ...nodes: (AbstractNode | Token | null | undefined)[]
     ): Location {
-        let start = [
-            Number.POSITIVE_INFINITY,
-            Number.POSITIVE_INFINITY
-        ] as readonly [number, number];
-        let end = [
-            Number.NEGATIVE_INFINITY,
-            Number.NEGATIVE_INFINITY
-        ] as readonly [number, number];
-
-        for (const node of nodes) {
-            if (!node) {
-                continue;
-            }
-
-            if (
-                node.location.end[0] > end[0] ||
-                (node.location.end[0] === end[0] &&
-                    node.location.end[1] > end[1])
-            ) {
-                end = node.location.end;
-            }
-
-            if (
-                node.location.start[0] < start[0] ||
-                (node.location.start[0] === start[0] &&
-                    node.location.start[1] < start[1])
-            ) {
-                start = node.location.start;
-            }
-        }
-
-        return {
-            start,
-            end,
-            filename: nodes[0]!.location.filename
-        };
+        return combineLocations(...nodes);
     }
 
     public parse(tokens: Iterable<Token>) {
@@ -762,16 +729,31 @@ class Parser {
     }
 
     protected parseFunctionDeclarationModifiers(context: ParserContext) {
-        const modifiersTokens: Record<TokenType, Token> = Object.create(null);
+        const modifierMap = new Map<FunctionDeclarationModifier, Token>();
 
         this.bufferModifiers(context);
         let index = 0;
 
         for (const token of context.tokenStack) {
-            if (this.functionModifierTokens.includes(token.type)) {
-                if (token.type in modifiersTokens) {
+            if (
+                (this.functionModifierTokens as readonly TokenType[]).includes(
+                    token.type
+                )
+            ) {
+                let modifier: FunctionDeclarationModifier;
+
+                switch (token.type) {
+                    case TokenType.Async:
+                        modifier = FunctionDeclarationModifier.Async;
+                        break;
+
+                    default:
+                        throw new Error("Unreachable");
+                }
+
+                if (modifierMap.has(modifier)) {
                     const isConflicting =
-                        modifiersTokens[token.type].value !== token.value;
+                        modifierMap.get(modifier)?.value !== token.value;
 
                     this.diagnostic({
                         code: DiagnosticCode.ConflictingModifiers,
@@ -781,52 +763,22 @@ class Parser {
                     });
                 }
 
-                modifiersTokens[token.type] = token;
+                modifierMap.set(modifier, token);
                 context.tokenStack.splice(index, 1);
             }
 
             index++;
         }
 
-        let modifiers: FunctionDeclarationModifier =
-            FunctionDeclarationModifier.None;
-
-        const functionModifierTokenRecord: Partial<
-            Record<FunctionDeclarationModifier, Token>
-        > = Object.create(null);
-
-        for (const key in modifiersTokens) {
-            let modifier;
-
-            switch (+key) {
-                case TokenType.Async:
-                    modifier = FunctionDeclarationModifier.Async;
-                    break;
-
-                default:
-                    throw new Error("Invalid state");
-            }
-
-            modifiers |= modifier;
-            functionModifierTokenRecord[modifier] =
-                modifiersTokens[+key as keyof typeof modifiersTokens];
-        }
-
-        return {
-            functionModifiers: modifiers,
-            functionModifierTokens: Object.values(modifiersTokens),
-            functionModifierTokenRecord
-        };
+        return modifierMap.size ? new ModifierListNode(modifierMap) : null;
     }
 
-    protected parseDeclarationAccessModifiers(context: ParserContext) {
-        let accessModifier: AccessModifier | null = null;
+    protected parseDeclarationAccessModifier(context: ParserContext) {
         let accessModifierToken: Token | null = null;
 
         this.bufferModifiers(context);
 
         let index = 0;
-        const tokens = [];
 
         for (const token of context.tokenStack) {
             if (this.accessModifierTokens.includes(token.type)) {
@@ -871,35 +823,23 @@ class Parser {
                 }
 
                 accessModifierToken = token;
-                accessModifier =
-                    token.type === TokenType.Public
-                        ? AccessModifier.Public
-                        : token.type === TokenType.Protected
-                          ? AccessModifier.Protected
-                          : token.type === TokenType.Internal
-                            ? AccessModifier.Internal
-                            : AccessModifier.Private;
-
-                tokens.push(token);
                 context.tokenStack.splice(index, 1);
             }
 
             index++;
         }
 
-        return { accessModifier, accessModifierTokens: tokens };
+        return accessModifierToken
+            ? new AccessModifierNode(accessModifierToken)
+            : null;
     }
 
     protected parseFunctionDeclaration(
         context: ParserContext
     ): FunctionDeclarationNode {
-        const { accessModifier, accessModifierTokens } =
-            this.parseDeclarationAccessModifiers(context);
-        const {
-            functionModifiers,
-            functionModifierTokens,
-            functionModifierTokenRecord
-        } = this.parseFunctionDeclarationModifiers(context);
+        const accessModifier = this.parseDeclarationAccessModifier(context);
+        const functionModifiers =
+            this.parseFunctionDeclarationModifiers(context);
 
         context.assertStackEmpty();
 
@@ -965,13 +905,11 @@ class Parser {
             returnType,
             parameters,
             accessModifier,
-            accessModifierTokens[0] ?? null,
             functionModifiers,
-            functionModifierTokenRecord,
             body,
             this.combineLocations(
-                ...accessModifierTokens,
-                ...functionModifierTokens,
+                accessModifier,
+                functionModifiers,
                 token,
                 identifier,
                 body
@@ -984,8 +922,7 @@ class Parser {
         parseInit = true,
         inline = false
     ): VariableDeclarationNode {
-        const { accessModifier, accessModifierTokens } =
-            this.parseDeclarationAccessModifiers(context);
+        const accessModifier = this.parseDeclarationAccessModifier(context);
 
         context.assertStackEmpty();
 
@@ -1009,28 +946,28 @@ class Parser {
         }
 
         return new VariableDeclarationNode(
-            keywordToken.type === TokenType.Let
-                ? VariableDeclarationKind.Let
-                : keywordToken.type === TokenType.Final
-                  ? VariableDeclarationKind.Final
-                  : VariableDeclarationKind.Const,
+            new VariableDeclarationKindNode(
+                keywordToken.type === TokenType.Let
+                    ? VariableDeclarationKind.Let
+                    : keywordToken.type === TokenType.Final
+                      ? VariableDeclarationKind.Final
+                      : VariableDeclarationKind.Const,
+                keywordToken
+            ),
             new IdentifierNode(identifier.value, identifier.location),
             annotatedType,
             accessModifier,
-            accessModifierTokens[0] ?? null,
             value,
             inline,
             this.combineLocations(
-                ...accessModifierTokens,
+                accessModifier,
                 keywordToken,
-                value ?? annotatedType ?? identifier
+                value,
+                annotatedType,
+                identifier
             )
         );
     }
-
-    protected parseClassDeclaration(
-        context: ParserContext
-    ): VariableDeclarationNode {}
 
     protected parseReturnStatement(context: ParserContext): AbstractNode {
         const token = context.expect([TokenType.Return]);

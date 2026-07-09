@@ -1,51 +1,35 @@
-import type Token from "../../lexer/Token.ts";
-import type AbstractNode from "../AbstractNode.ts";
-import DeclarationNode from "../DeclarationNode.ts";
 import type ExpressionNode from "../ExpressionNode.ts";
 import type IdentifierNode from "../expressions/IdentifierNode.ts";
 import type { TypeExpressionNode } from "../expressions/TypeExpressionNode.ts";
 import type { Location } from "../Location.ts";
 import NodeType from "../NodeType.ts";
-import type { AccessModifier } from "./AccessModifier.ts";
-import type VariableDeclarationKind from "./VariableDeclarationKind.ts";
+import AbstractVariableDeclarationNode from "./AbstractVariableDeclarationNode.ts";
+import type AccessModifierNode from "./AccessModifierNode.ts";
+import type VariableDeclarationKindNode from "./VariableDeclarationKindNode.ts";
 
-class VariableDeclarationNode extends DeclarationNode {
+class VariableDeclarationNode extends AbstractVariableDeclarationNode {
     public override readonly type = NodeType.VariableDeclaration;
-    public readonly kind: VariableDeclarationKind;
-    public readonly identifier: IdentifierNode;
-    public readonly annotatedType?: TypeExpressionNode;
-    public readonly accessModifier: AccessModifier | null;
-    public readonly accessModifierToken: Token | null;
-    public readonly value?: ExpressionNode;
     public readonly inline: boolean;
 
     public constructor(
-        kind: VariableDeclarationKind,
+        kind: VariableDeclarationKindNode,
         identifier: IdentifierNode,
         annotatedType: TypeExpressionNode | undefined,
-        accessModifier: AccessModifier | null,
-        accessModifierToken: Token | null,
-        value: ExpressionNode | undefined,
+        accessModifier: AccessModifierNode | null,
+        defaultValue: ExpressionNode | undefined,
         inline = false,
         location: Location
     ) {
-        super(location);
-        this.kind = kind;
-        this.identifier = identifier;
-        this.annotatedType = annotatedType;
-        this.accessModifier = accessModifier;
-        this.accessModifierToken = accessModifierToken;
-        this.inline = inline;
-        this.value = value;
-    }
+        super(
+            kind,
+            identifier,
+            annotatedType,
+            accessModifier,
+            defaultValue,
+            location
+        );
 
-    public override branches(): AbstractNode[] {
-        return [
-            ...super.branches(),
-            this.identifier,
-            this.annotatedType,
-            this.value
-        ].filter(x => !!x);
+        this.inline = inline;
     }
 }
 

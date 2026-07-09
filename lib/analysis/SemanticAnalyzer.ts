@@ -51,7 +51,7 @@ class SemanticAnalyzer {
                                 ? []
                                 : [
                                       {
-                                          message: `Previously defined as '${chalk.blueBright.bold(VariableDeclarationKind[symbol.node.kind as unknown as keyof typeof VariableDeclarationKind].toLowerCase())} ${symbol.node.identifier.symbol}${
+                                          message: `Previously defined as '${chalk.blueBright.bold(VariableDeclarationKind[symbol.node.kind.value as unknown as keyof typeof VariableDeclarationKind].toLowerCase())} ${symbol.node.identifier.symbol}${
                                               symbol.node.annotatedType
                                                   ? chalk.whiteBright.dim(
                                                         ": "
@@ -85,8 +85,8 @@ class SemanticAnalyzer {
         sourceNode.walk({
             [NodeType.VariableDeclaration]: node => {
                 if (
-                    node.kind !== VariableDeclarationKind.Let &&
-                    !node.value &&
+                    node.kind.value !== VariableDeclarationKind.Let &&
+                    !node.defaultValue &&
                     !node.inline
                 ) {
                     diagnostics.push({
@@ -98,8 +98,8 @@ class SemanticAnalyzer {
                 }
 
                 if (
-                    node.kind === VariableDeclarationKind.Let &&
-                    !node.value &&
+                    node.kind.value === VariableDeclarationKind.Let &&
+                    !node.defaultValue &&
                     !node.annotatedType &&
                     !node.inline
                 ) {
@@ -127,23 +127,19 @@ class SemanticAnalyzer {
                         message: `Modifiers are not allowed for block-scoped identifier '${node.identifier.symbol}'`,
                         code: DiagnosticCode.ModifiersNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location:
-                            node.accessModifierToken?.location ??
-                            node.identifier.location
+                        location: node.accessModifier.location
                     });
                 } else if (
                     node.accessModifier &&
-                    node.accessModifier !== AccessModifier.Public &&
-                    node.accessModifier !== AccessModifier.Private &&
-                    node.accessModifier !== AccessModifier.Internal
+                    node.accessModifier.value !== AccessModifier.Public &&
+                    node.accessModifier.value !== AccessModifier.Private &&
+                    node.accessModifier.value !== AccessModifier.Internal
                 ) {
                     diagnostics.push({
                         message: `Modifier '${node.accessModifier}' is not applicable for '${node.identifier.symbol}'`,
                         code: DiagnosticCode.ModifierNotApplicable,
                         level: DiagnosticLevel.Error,
-                        location:
-                            node.accessModifierToken?.location ??
-                            node.identifier.location
+                        location: node.accessModifier.location
                     });
                 }
 
@@ -220,9 +216,7 @@ class SemanticAnalyzer {
                         message: `Modifiers are not allowed for '${node.variable.identifier.symbol}'`,
                         code: DiagnosticCode.ModifiersNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location:
-                            node.variable.accessModifierToken?.location ??
-                            node.variable.identifier.location
+                        location: node.variable.accessModifier.location
                     });
                 }
             },
@@ -235,9 +229,7 @@ class SemanticAnalyzer {
                         message: `Modifiers are not allowed for '${node.init.identifier.symbol}'`,
                         code: DiagnosticCode.ModifiersNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location:
-                            node.init.accessModifierToken?.location ??
-                            node.init.identifier.location
+                        location: node.init.accessModifier.location
                     });
                 }
             },
@@ -272,9 +264,7 @@ class SemanticAnalyzer {
                         message: `Modifiers are not allowed for block-scoped identifier '${node.identifier.symbol}'`,
                         code: DiagnosticCode.ModifiersNotAllowed,
                         level: DiagnosticLevel.Error,
-                        location:
-                            node.accessModifierToken?.location ??
-                            node.identifier.location
+                        location: node.accessModifier.location
                     });
                 }
 
@@ -315,7 +305,8 @@ class SemanticAnalyzer {
                     symbolDefinition instanceof
                         VariableDeclarationSymbolDefinition &&
                     !symbolDefinition.isAssigned &&
-                    symbolDefinition.node.kind === VariableDeclarationKind.Let
+                    symbolDefinition.node.kind.value ===
+                        VariableDeclarationKind.Let
                 ) {
                     diagnostics.push({
                         message: `let '${symbolName}' is never reassigned`,

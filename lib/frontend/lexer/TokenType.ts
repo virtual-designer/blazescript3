@@ -63,7 +63,7 @@ enum TokenType {
     Interface,
     Trait,
     Sealed,
-    Data,
+    Record,
     Abstract,
     Annotation,
     Extends,

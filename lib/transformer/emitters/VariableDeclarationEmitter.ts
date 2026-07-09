@@ -18,16 +18,19 @@ class VariableDeclarationEmitter extends ESTreeEmitter<
     ): ESTree.VariableDeclaration | ESTree.ExportNamedDeclaration {
         const variableDeclaration: ESTree.VariableDeclaration = {
             type: "VariableDeclaration",
-            kind: node.kind === VariableDeclarationKind.Let ? "let" : "const",
+            kind:
+                node.kind.value === VariableDeclarationKind.Let
+                    ? "let"
+                    : "const",
             declarations: [
                 {
                     type: "VariableDeclarator",
                     id: this.transformer
                         .getEmitter(IdentifierEmitter)
                         .emit(node.identifier, context),
-                    init: node.value
+                    init: node.defaultValue
                         ? (this.transformer.transformExpression(
-                              node.value,
+                              node.defaultValue,
                               context
                           ) as ESTree.Expression)
                         : undefined
@@ -37,7 +40,7 @@ class VariableDeclarationEmitter extends ESTreeEmitter<
 
         if (
             node.accessModifier &&
-            node.accessModifier !== AccessModifier.Private
+            node.accessModifier.value !== AccessModifier.Private
         ) {
             return this.transformer.exportDeclaration(variableDeclaration);
         }

@@ -21,8 +21,8 @@ export class FunctionDeclarationSymbolDefinition extends SymbolDefinition {
 
     public override hasExportLinkage(): boolean {
         return (
-            this.node.accessModifier === AccessModifier.Public ||
-            this.node.accessModifier === AccessModifier.Internal
+            this.node.accessModifier?.value === AccessModifier.Public ||
+            this.node.accessModifier?.value === AccessModifier.Internal
         );
     }
 }
