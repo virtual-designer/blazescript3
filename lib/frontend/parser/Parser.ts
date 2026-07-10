@@ -19,6 +19,7 @@ import { FunctionDeclarationModifier } from "../tree/declarations/FunctionDeclar
 import FunctionDeclarationNode from "../tree/declarations/FunctionDeclarationNode.ts";
 import FunctionParameterDeclarationNode from "../tree/declarations/FunctionParameterDeclarationNode.ts";
 import ModifierListNode from "../tree/declarations/ModifierListNode.ts";
+import PackageDeclarationNode from "../tree/declarations/PackageDeclarationNode.ts";
 import VariableDeclarationKind from "../tree/declarations/VariableDeclarationKind.ts";
 import VariableDeclarationKindNode from "../tree/declarations/VariableDeclarationKindNode.ts";
 import VariableDeclarationNode from "../tree/declarations/VariableDeclarationNode.ts";
@@ -42,6 +43,8 @@ import MatchExpressionCaseNode, {
     MatchExpressionCaseKind
 } from "../tree/expressions/MatchExpressionCaseNode.ts";
 import MatchExpressionNode from "../tree/expressions/MatchExpressionNode.ts";
+import MemberAccessExpressionNode from "../tree/expressions/MemberAccessExpressionNode.ts";
+import NewExpressionNode from "../tree/expressions/NewExpressionNode.ts";
 import RangeExpressionNode from "../tree/expressions/RangeExpressionNode.ts";
 import type { TypeExpressionNode } from "../tree/expressions/TypeExpressionNode.ts";
 import { UnaryExpressionKind } from "../tree/expressions/UnaryExpressionKind.ts";
@@ -95,7 +98,8 @@ class Parser {
     ] as const;
 
     protected readonly classMemberModifierTokens = [
-        TokenType.Override
+        TokenType.Override,
+        TokenType.Static
     ] as const;
 
     protected readonly functionModifierTokens = [TokenType.Async] as const;
@@ -401,25 +405,14 @@ class Parser {
             case TokenType.Await:
                 return this.parseAwaitExpression(context);
 
+            case TokenType.New:
+                return this.parseNewExpression(context);
+
             case TokenType.ParenthesisOpen:
                 context.consume();
                 const expression = this.parseExpression(context);
                 context.expect([TokenType.ParenthesisClose]);
-
-                if (context.peek()?.type === TokenType.ParenthesisOpen) {
-                    return this.parseCallExpression(context, expression);
-                }
-
                 return expression;
-
-            case TokenType.Identifier:
-                const identifier = this.parseIdentifier(context);
-
-                if (context.peek()?.type === TokenType.ParenthesisOpen) {
-                    return this.parseCallExpression(context, identifier);
-                }
-
-                return identifier;
 
             default:
                 return this.parseSimpleExpression(context);
@@ -477,11 +470,23 @@ class Parser {
         }
     }
 
-    protected parseCallExpression(
-        context: ParserContext,
-        callee: ExpressionNode
-    ): ExpressionNode {
-        let node: ExpressionNode = callee;
+    protected parseNewExpression(context: ParserContext): ExpressionNode {
+        const newToken = context.expect([TokenType.New]);
+        const expression = this.parseCallExpression(context);
+
+        if (!(expression instanceof CallExpressionNode)) {
+            context.unexpected(context.peek());
+        }
+
+        return new NewExpressionNode(
+            expression.callee,
+            expression.args,
+            this.combineLocations(newToken, expression)
+        );
+    }
+
+    protected parseCallExpression(context: ParserContext): ExpressionNode {
+        let node: ExpressionNode = this.parseMemberAccessExpression(context);
 
         while (context.peek()?.type === TokenType.ParenthesisOpen) {
             const args: ExpressionNode[] = [];
@@ -556,10 +561,41 @@ class Parser {
         return this.parsePostfixUnaryExpression(context);
     }
 
+    protected parseMemberAccessExpression(
+        context: ParserContext
+    ): ExpressionNode {
+        let target: ExpressionNode = this.parsePrimaryExpression(context);
+
+        while (
+            !context.isEOF() &&
+            (context.peek()?.type === TokenType.Dot ||
+                (context.peek()?.type === TokenType.QuestionMark &&
+                    context.peek(1)?.type === TokenType.Dot))
+        ) {
+            const optional =
+                context.expect([TokenType.Dot, TokenType.QuestionMark])
+                    ?.type === TokenType.QuestionMark;
+
+            if (optional) {
+                context.expect([TokenType.Dot]);
+            }
+
+            const identifier = this.parseIdentifier(context);
+            target = new MemberAccessExpressionNode(
+                target,
+                identifier,
+                optional,
+                this.combineLocations(target, identifier)
+            );
+        }
+
+        return target;
+    }
+
     protected parsePostfixUnaryExpression(
         context: ParserContext
     ): ExpressionNode {
-        let expression = this.parsePrimaryExpression(context);
+        let expression = this.parseCallExpression(context);
         const operators = [];
 
         while (
@@ -769,6 +805,10 @@ class Parser {
                 switch (token.type) {
                     case TokenType.Override:
                         modifier = ClassMemberModifier.Override;
+                        break;
+
+                    case TokenType.Static:
+                        modifier = ClassMemberModifier.Static;
                         break;
 
                     default:
@@ -1453,6 +1493,27 @@ class Parser {
         return new EmptyStatementNode(token.location);
     }
 
+    protected parsePackageDeclaration(context: ParserContext): AbstractNode {
+        const packageToken = context.expect([TokenType.Package]);
+        const path: IdentifierNode[] = [];
+
+        while (context.peek()?.type === TokenType.Identifier) {
+            path.push(this.parseIdentifier(context));
+
+            if (
+                context.peek()?.type !== TokenType.Semicolon &&
+                context.peek(1)?.type === TokenType.Identifier
+            ) {
+                context.expect([TokenType.Dot]);
+            }
+        }
+
+        return new PackageDeclarationNode(
+            path,
+            this.combineLocations(packageToken, ...path)
+        );
+    }
+
     protected trimSemicolons(
         context: ParserContext,
         semicolon: boolean = context.semicolon,
@@ -1506,6 +1567,10 @@ class Parser {
             case TokenType.Annotation:
             case TokenType.Class:
                 node = this.parseClassDeclaration(context);
+                break;
+
+            case TokenType.Package:
+                node = this.parsePackageDeclaration(context);
                 break;
 
             default:

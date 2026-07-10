@@ -57,7 +57,7 @@
                 },
                 {
                     "name": "keyword.other.blazescript",
-                    "match": "\\b(public|private|protected|internal|async|synchronized|override|static|operator|infix|class|abstract|interface|trait|annotation|sealed|permits|extends|implements|uses|record|enum|object)\\b"
+                    "match": "\\b(public|private|protected|internal|async|synchronized|override|static|operator|infix|class|abstract|interface|trait|annotation|sealed|permits|extends|implements|uses|record|enum|object|this|super)\\b"
                 },
                 {
                     "name": "keyword.operator.new.blazescript",
@@ -71,12 +71,34 @@
                     "include": "#decls"
                 },
                 {
-                    "include": "#import"
+                    "include": "#importStatement"
                 }
             ]
         },
-        "import": {
+        "importStatement": {
             "begin": "\\b(import)\\b\\s*",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.other.blazescript"
+                }
+            },
+            "end": ";",
+            "patterns": [
+                {
+                    "match": "(([A-Za-z_$][A-Za-z0-9_$]*)\\.)?(([A-Za-z_$][A-Za-z0-9_$]*))",
+                    "captures": {
+                        "2": {
+                            "name": "variable.name.blazescript"
+                        },
+                        "4": {
+                            "name": "variable.name.blazescript"
+                        }
+                    }
+                }
+            ]
+        },
+        "packageDeclaration": {
+            "begin": "\\b(package)\\b\\s*",
             "beginCaptures": {
                 "1": {
                     "name": "keyword.other.blazescript"
@@ -100,7 +122,8 @@
         "decls": {
             "patterns": [
                 { "include": "#variableDeclaration" },
-                { "include": "#functionDeclaration" }
+                { "include": "#functionDeclaration" },
+                { "include": "#packageDeclaration" }
             ]
         },
         "functionDeclaration": {

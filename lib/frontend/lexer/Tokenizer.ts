@@ -79,7 +79,9 @@ class Tokenizer {
         permits: TokenType.Permits,
         infix: TokenType.Infix,
         out: TokenType.Out,
-        new: TokenType.New
+        new: TokenType.New,
+        package: TokenType.Package,
+        static: TokenType.Static
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);

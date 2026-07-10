@@ -1,5 +1,6 @@
 import ESTree from "estree";
 import ClassMethodDeclarationNode from "../../frontend/tree/declarations/ClassMethodDeclarationNode.ts";
+import { ClassMethodModifier } from "../../frontend/tree/declarations/ClassMethodModifier.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
 import BlockStatementEmitter from "./BlockStatementEmitter.ts";
@@ -22,7 +23,7 @@ class ClassMethodDeclarationEmitter extends ESTreeEmitter<
                 .getEmitter(IdentifierEmitter)
                 .emit(node.identifier, context),
             kind: "method",
-            static: false,
+            static: node.modifiers?.has(ClassMethodModifier.Static) ?? false,
             value: {
                 type: "FunctionExpression",
                 async: false,

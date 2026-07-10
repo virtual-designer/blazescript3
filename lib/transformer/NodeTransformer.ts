@@ -23,6 +23,9 @@ import IfStatementEmitter from "./emitters/IfStatementEmitter.ts";
 import ImportStatementEmitter from "./emitters/ImportStatementEmitter.ts";
 import LiteralEmitter from "./emitters/LiteralEmitter.ts";
 import MatchExpressionEmitter from "./emitters/MatchExpressionEmitter.ts";
+import MemberAccessExpressionEmitter from "./emitters/MemberAccessExpressionEmitter.ts";
+import NewExpressionEmitter from "./emitters/NewExpressionEmitter.ts";
+import PackageDeclarationEmitter from "./emitters/PackageDeclarationEmitter.ts";
 import RangeExpressionEmitter from "./emitters/RangeExpressionEmitter.ts";
 import ReturnStatementEmitter from "./emitters/ReturnStatementEmitter.ts";
 import RootEmitter from "./emitters/RootEmitter.ts";
@@ -61,7 +64,10 @@ class NodeTransformer {
         WhileStatementEmitter,
         ClassDeclarationEmitter,
         ClassPropertyDeclarationEmitter,
-        ClassMethodDeclarationEmitter
+        ClassMethodDeclarationEmitter,
+        MemberAccessExpressionEmitter,
+        NewExpressionEmitter,
+        PackageDeclarationEmitter
     ];
 
     private readonly emitterMap = new Map<

@@ -72,7 +72,10 @@ enum TokenType {
     Permits,
     Infix,
     Out,
-    New
+    New,
+    QuestionMark,
+    Package,
+    Static
 }
 
 export default TokenType;

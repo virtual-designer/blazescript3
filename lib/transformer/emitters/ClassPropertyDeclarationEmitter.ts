@@ -1,5 +1,6 @@
 import ESTree from "estree";
 import ClassPropertyDeclarationNode from "../../frontend/tree/declarations/ClassPropertyDeclarationNode.ts";
+import { ClassPropertyModifier } from "../../frontend/tree/declarations/ClassPropertyModifier.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
 import IdentifierEmitter from "./IdentifierEmitter.ts";
@@ -20,7 +21,7 @@ class ClassPropertyDeclarationEmitter extends ESTreeEmitter<
                 .getEmitter(IdentifierEmitter)
                 .emit(node.identifier, context),
             computed: false,
-            static: false,
+            static: node.modifiers?.has(ClassPropertyModifier.Static) ?? false,
             value: node.defaultValue
                 ? this.transformer.transformExpression(
                       node.defaultValue,

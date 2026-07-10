@@ -30,7 +30,10 @@ enum NodeType {
     ModifierList,
     VariableDeclarationKind,
     ClassKind,
-    Keyword
+    Keyword,
+    MemberAccessExpression,
+    NewExpression,
+    PackageDeclaration
 }
 
 export default NodeType;

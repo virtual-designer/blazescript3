@@ -160,29 +160,31 @@ class SemanticAnalyzer {
                 }
             },
             [NodeType.AssignmentExpression]: node => {
-                const symbol = scope.symbolTable.get(node.left.symbol);
+                if (node.left instanceof IdentifierNode) {
+                    const symbol = scope.symbolTable.get(node.left.symbol);
 
-                if (
-                    symbol &&
-                    symbol instanceof VariableDeclarationSymbolDefinition
-                ) {
-                    if (symbol.kind !== VariableDeclarationKind.Let) {
-                        diagnostics.push({
-                            message: `${symbol.kind} declaration '${symbol.node.identifier.symbol}' cannot be reassigned`,
-                            code: DiagnosticCode.IllegalAssignment,
-                            level: DiagnosticLevel.Error,
-                            location: node.left.location
-                        });
+                    if (
+                        symbol &&
+                        symbol instanceof VariableDeclarationSymbolDefinition
+                    ) {
+                        if (symbol.kind !== VariableDeclarationKind.Let) {
+                            diagnostics.push({
+                                message: `${symbol.kind} declaration '${symbol.node.identifier.symbol}' cannot be reassigned`,
+                                code: DiagnosticCode.IllegalAssignment,
+                                level: DiagnosticLevel.Error,
+                                location: node.left.location
+                            });
 
-                        diagnostics.push({
-                            message: `Consider using 'let' instead of '${symbol.kind}' for '${symbol.node.identifier.symbol}' to allow reassignment`,
-                            code: DiagnosticCode.IllegalAssignment,
-                            level: DiagnosticLevel.Note,
-                            location: symbol.node.identifier.location
-                        });
+                            diagnostics.push({
+                                message: `Consider using 'let' instead of '${symbol.kind}' for '${symbol.node.identifier.symbol}' to allow reassignment`,
+                                code: DiagnosticCode.IllegalAssignment,
+                                level: DiagnosticLevel.Note,
+                                location: symbol.node.identifier.location
+                            });
+                        }
+
+                        symbol.setAssigned(true);
                     }
-
-                    symbol.setAssigned(true);
                 }
             },
             [NodeType.UnaryExpression]: node => {
