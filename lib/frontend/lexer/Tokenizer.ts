@@ -24,7 +24,8 @@ class Tokenizer {
         "[": TokenType.BracketOpen,
         "]": TokenType.BracketClose,
         "|": TokenType.Pipe,
-        "&": TokenType.Ampersand
+        "&": TokenType.Ampersand,
+        "@": TokenType.At
     } as const;
 
     public static readonly MULTI_CHAR_TOKENS = {

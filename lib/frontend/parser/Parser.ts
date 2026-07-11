@@ -5,13 +5,15 @@ import Token from "../lexer/Token.ts";
 import TokenType from "../lexer/TokenType.ts";
 import type AbstractNode from "../tree/AbstractNode.ts";
 import type DeclarationNode from "../tree/DeclarationNode.ts";
+import { AccessModifier } from "../tree/declarations/AccessModifier.ts";
 import AccessModifierNode from "../tree/declarations/AccessModifierNode.ts";
+import AnnotationNode from "../tree/declarations/AnnotationNode.ts";
 import ClassDeclarationNode from "../tree/declarations/ClassDeclarationNode.ts";
 import { ClassKind } from "../tree/declarations/ClassKind.ts";
 import ClassKindNode from "../tree/declarations/ClassKindNode.ts";
 import { ClassMemberModifier } from "../tree/declarations/ClassMemberModifier.ts";
 import ClassMethodDeclarationNode from "../tree/declarations/ClassMethodDeclarationNode.ts";
-import type { ClassMethodModifier } from "../tree/declarations/ClassMethodModifier.ts";
+import { ClassMethodModifier } from "../tree/declarations/ClassMethodModifier.ts";
 import { ClassModifier } from "../tree/declarations/ClassModifier.ts";
 import ClassPropertyDeclarationNode from "../tree/declarations/ClassPropertyDeclarationNode.ts";
 import type { ClassPropertyModifier } from "../tree/declarations/ClassPropertyModifier.ts";
@@ -85,31 +87,35 @@ type ErrorOptions = {
 };
 
 class Parser {
-    protected readonly accessModifierTokens = [
-        TokenType.Public,
-        TokenType.Private,
-        TokenType.Protected,
-        TokenType.Internal
-    ];
+    protected readonly accessModifierTokens = {
+        [TokenType.Public]: AccessModifier.Public,
+        [TokenType.Private]: AccessModifier.Private,
+        [TokenType.Protected]: AccessModifier.Protected,
+        [TokenType.Internal]: AccessModifier.Internal
+    } as const;
 
-    protected readonly classModifierTokens = [
-        TokenType.Abstract,
-        TokenType.Sealed
-    ] as const;
+    protected readonly classModifierTokens = {
+        [TokenType.Abstract]: ClassModifier.Abstract,
+        [TokenType.Sealed]: ClassModifier.Sealed
+    } as const;
 
-    protected readonly classMemberModifierTokens = [
-        TokenType.Override,
-        TokenType.Static
-    ] as const;
+    protected readonly classMemberModifierTokens = {
+        [TokenType.Override]: ClassMemberModifier.Override,
+        [TokenType.Static]: ClassMemberModifier.Static
+    } as const;
 
-    protected readonly functionModifierTokens = [TokenType.Async] as const;
+    protected readonly functionModifierTokens = {
+        [TokenType.Async]: FunctionDeclarationModifier.Async,
+        [TokenType.Operator]: FunctionDeclarationModifier.Operator,
+        [TokenType.Infix]: FunctionDeclarationModifier.Infix
+    } as const;
 
-    protected readonly modifierTokens = [
+    protected readonly modifierTokens = {
         ...this.accessModifierTokens,
         ...this.functionModifierTokens,
         ...this.classModifierTokens,
         ...this.classMemberModifierTokens
-    ];
+    };
 
     protected readonly noSemicolonStatementTypes = [
         NodeType.IfStatement,
@@ -314,6 +320,18 @@ class Parser {
         });
     }
 
+    /* Expression parsing. */
+
+    protected parseExpression(context: ParserContext): ExpressionNode {
+        return this.parseAssignmentExpression(context);
+    }
+
+    protected parseIdentifier(context: ParserContext): IdentifierNode {
+        const token = context.expect([TokenType.Identifier]);
+        const node = new IdentifierNode(token.value, token.location);
+        return node;
+    }
+
     protected parseMatchExpression(context: ParserContext): ExpressionNode {
         const matchToken = context.expect([TokenType.Match]);
 
@@ -417,12 +435,6 @@ class Parser {
             default:
                 return this.parseSimpleExpression(context);
         }
-    }
-
-    protected parseIdentifier(context: ParserContext): IdentifierNode {
-        const token = context.expect([TokenType.Identifier]);
-        const node = new IdentifierNode(token.value, token.location);
-        return node;
     }
 
     protected parseSimpleExpression(
@@ -730,8 +742,47 @@ class Parser {
         return left;
     }
 
-    protected parseExpression(context: ParserContext): ExpressionNode {
-        return this.parseAssignmentExpression(context);
+    protected parseRangeExpression(context: ParserContext): ExpressionNode {
+        const left = this.parseBasicBinaryExpression(context);
+
+        if (
+            context.peek()?.type !== TokenType.DotDot &&
+            (context.peek()?.type !== TokenType.Not ||
+                context.peek(1)?.type !== TokenType.DotDot)
+        ) {
+            return left;
+        }
+
+        let leftInclusive = true,
+            rightInclusive = true;
+
+        const token = context.expect([TokenType.DotDot, TokenType.Not]);
+
+        if (token?.type === TokenType.Not) {
+            leftInclusive = false;
+            context.expect([TokenType.DotDot]);
+        }
+
+        if (context.peek()?.type === TokenType.Not) {
+            rightInclusive = false;
+            context.consume();
+        }
+
+        const right = this.parseBasicBinaryExpression(context);
+
+        return new RangeExpressionNode(
+            left,
+            right,
+            leftInclusive,
+            rightInclusive,
+            this.combineLocations(left, right)
+        );
+    }
+
+    /* Type expression parsing. */
+
+    protected parseTypeExpression(context: ParserContext): TypeExpressionNode {
+        return this.parseTypeBinaryExpression(context);
     }
 
     protected parseTypeSimpleExpression(
@@ -784,155 +835,152 @@ class Parser {
         return left;
     }
 
-    protected parseTypeExpression(context: ParserContext): TypeExpressionNode {
-        return this.parseTypeBinaryExpression(context);
+    /* Declaration parsing. */
+
+    protected bufferModifiers(context: ParserContext) {
+        while (
+            !context.isEOF() &&
+            context.peek() &&
+            context.peek()!.type in this.modifierTokens
+        ) {
+            context.tokenStack.push(context.consume()!);
+        }
+    }
+
+    protected parseAnnotations(context: ParserContext) {
+        const annotations = [];
+
+        while (!context.isEOF() && context.peek()?.type === TokenType.At) {
+            const atToken = context.consume();
+            const callExpression = this.parseCallExpression(context);
+
+            if (
+                !(
+                    (callExpression instanceof CallExpressionNode &&
+                        (callExpression.callee instanceof
+                            MemberAccessExpressionNode ||
+                            callExpression.callee instanceof IdentifierNode)) ||
+                    callExpression instanceof IdentifierNode
+                )
+            ) {
+                context.unexpected(context.peek());
+            }
+
+            annotations.push(
+                new AnnotationNode(
+                    callExpression instanceof CallExpressionNode
+                        ? (callExpression.callee as
+                              | MemberAccessExpressionNode
+                              | IdentifierNode)
+                        : (callExpression as IdentifierNode),
+                    callExpression instanceof CallExpressionNode
+                        ? callExpression.args
+                        : [],
+                    this.combineLocations(atToken, callExpression)
+                )
+            );
+        }
+
+        return annotations;
+    }
+
+    protected parseDeclaration(context: ParserContext): DeclarationNode | null {
+        let node: DeclarationNode;
+        const annotations = this.parseAnnotations(context);
+
+        this.bufferModifiers(context);
+
+        switch (context.peek()?.type) {
+            case TokenType.Let:
+            case TokenType.Const:
+            case TokenType.Final:
+                node = this.parseVariableDeclaration(context);
+                break;
+
+            case TokenType.Function:
+                node = this.parseFunctionDeclaration(context, annotations);
+                break;
+
+            case TokenType.Record:
+            case TokenType.Annotation:
+            case TokenType.Class:
+                node = this.parseClassDeclaration(context, annotations);
+                break;
+
+            case TokenType.Package:
+                node = this.parsePackageDeclaration(context);
+                break;
+
+            default:
+                return null;
+        }
+
+        if (annotations.length) {
+            context.unexpected(context.peek());
+        }
+
+        this.trimSemicolons(context, context.semicolon, node);
+        return node;
+    }
+
+    protected parseModifiers<T extends number>(
+        context: ParserContext,
+        map: Partial<Record<TokenType, T>>,
+        conflictMessage?: (isConflicting: boolean, token: Token) => string
+    ) {
+        const modifierMap = new Map<T, Token>();
+
+        this.bufferModifiers(context);
+
+        for (let index = 0; index < context.tokenStack.length; ) {
+            const token = context.tokenStack[index]!;
+            const modifier = map[token.type];
+
+            if (modifier !== undefined) {
+                if (modifierMap.has(modifier)) {
+                    const isConflicting =
+                        modifierMap.get(modifier)?.value !== token.value;
+
+                    this.diagnostic({
+                        code: DiagnosticCode.ConflictingModifiers,
+                        level: DiagnosticLevel.Error,
+                        message:
+                            conflictMessage?.(isConflicting, token) ??
+                            `${isConflicting ? "Conflicting" : "Duplicate"} modifier '${token.value}'`,
+                        location: token.location
+                    });
+                }
+
+                modifierMap.set(modifier, token);
+                context.tokenStack.splice(index, 1);
+                continue;
+            }
+
+            index++;
+        }
+
+        return modifierMap.size ? new ModifierListNode(modifierMap) : null;
     }
 
     protected parseClassMemberModifiers(context: ParserContext) {
-        const modifierMap = new Map<ClassMemberModifier, Token>();
-
-        this.bufferModifiers(context);
-
-        for (let index = 0; index < context.tokenStack.length; ) {
-            const token = context.tokenStack[index]!;
-            if (
-                (
-                    this.classMemberModifierTokens as readonly TokenType[]
-                ).includes(token.type)
-            ) {
-                let modifier: ClassMemberModifier;
-
-                switch (token.type) {
-                    case TokenType.Override:
-                        modifier = ClassMemberModifier.Override;
-                        break;
-
-                    case TokenType.Static:
-                        modifier = ClassMemberModifier.Static;
-                        break;
-
-                    default:
-                        throw new Error("Unreachable");
-                }
-
-                if (modifierMap.has(modifier)) {
-                    const isConflicting =
-                        modifierMap.get(modifier)?.value !== token.value;
-
-                    this.diagnostic({
-                        code: DiagnosticCode.ConflictingModifiers,
-                        level: DiagnosticLevel.Error,
-                        message: `${isConflicting ? "Conflicting" : "Duplicate"} modifier '${token.value}'`,
-                        location: token.location
-                    });
-                }
-
-                modifierMap.set(modifier, token);
-                context.tokenStack.splice(index, 1);
-                continue;
-            }
-
-            index++;
-        }
-
-        return modifierMap.size ? new ModifierListNode(modifierMap) : null;
+        return this.parseModifiers<ClassMemberModifier>(
+            context,
+            this.classMemberModifierTokens
+        );
     }
 
     protected parseClassDeclarationModifiers(context: ParserContext) {
-        const modifierMap = new Map<ClassModifier, Token>();
-
-        this.bufferModifiers(context);
-
-        for (let index = 0; index < context.tokenStack.length; ) {
-            const token = context.tokenStack[index]!;
-
-            if (
-                (this.classModifierTokens as readonly TokenType[]).includes(
-                    token.type
-                )
-            ) {
-                let modifier: ClassModifier;
-
-                switch (token.type) {
-                    case TokenType.Abstract:
-                        modifier = ClassModifier.Abstract;
-                        break;
-
-                    case TokenType.Sealed:
-                        modifier = ClassModifier.Sealed;
-                        break;
-
-                    default:
-                        throw new Error("Unreachable");
-                }
-
-                if (modifierMap.has(modifier)) {
-                    const isConflicting =
-                        modifierMap.get(modifier)?.value !== token.value;
-
-                    this.diagnostic({
-                        code: DiagnosticCode.ConflictingModifiers,
-                        level: DiagnosticLevel.Error,
-                        message: `${isConflicting ? "Conflicting" : "Duplicate"} modifier '${token.value}'`,
-                        location: token.location
-                    });
-                }
-
-                modifierMap.set(modifier, token);
-                context.tokenStack.splice(index, 1);
-                continue;
-            }
-
-            index++;
-        }
-
-        return modifierMap.size ? new ModifierListNode(modifierMap) : null;
+        return this.parseModifiers<ClassModifier>(
+            context,
+            this.classModifierTokens
+        );
     }
 
     protected parseFunctionDeclarationModifiers(context: ParserContext) {
-        const modifierMap = new Map<FunctionDeclarationModifier, Token>();
-
-        this.bufferModifiers(context);
-
-        for (let index = 0; index < context.tokenStack.length; ) {
-            const token = context.tokenStack[index]!;
-            if (
-                (this.functionModifierTokens as readonly TokenType[]).includes(
-                    token.type
-                )
-            ) {
-                let modifier: FunctionDeclarationModifier;
-
-                switch (token.type) {
-                    case TokenType.Async:
-                        modifier = FunctionDeclarationModifier.Async;
-                        break;
-
-                    default:
-                        throw new Error("Unreachable");
-                }
-
-                if (modifierMap.has(modifier)) {
-                    const isConflicting =
-                        modifierMap.get(modifier)?.value !== token.value;
-
-                    this.diagnostic({
-                        code: DiagnosticCode.ConflictingModifiers,
-                        level: DiagnosticLevel.Error,
-                        message: `${isConflicting ? "Conflicting" : "Duplicate"} modifier '${token.value}'`,
-                        location: token.location
-                    });
-                }
-
-                modifierMap.set(modifier, token);
-                context.tokenStack.splice(index, 1);
-                continue;
-            }
-
-            index++;
-        }
-
-        return modifierMap.size ? new ModifierListNode(modifierMap) : null;
+        return this.parseModifiers<FunctionDeclarationModifier>(
+            context,
+            this.functionModifierTokens
+        );
     }
 
     protected parseDeclarationAccessModifier(context: ParserContext) {
@@ -943,7 +991,7 @@ class Parser {
         for (let index = 0; index < context.tokenStack.length; ) {
             const token = context.tokenStack[index]!;
 
-            if (this.accessModifierTokens.includes(token.type)) {
+            if (token.type in this.accessModifierTokens) {
                 if (accessModifierToken) {
                     if (
                         token.location.start[0] !==
@@ -998,7 +1046,8 @@ class Parser {
     }
 
     protected parseFunctionDeclaration(
-        context: ParserContext
+        context: ParserContext,
+        annotations: AnnotationNode[]
     ): FunctionDeclarationNode {
         const accessModifier = this.parseDeclarationAccessModifier(context);
         const functionModifiers =
@@ -1016,6 +1065,7 @@ class Parser {
             !context.isEOF() &&
             context.peek()?.type !== TokenType.ParenthesisClose
         ) {
+            const annotations = this.parseAnnotations(context);
             const identifier = this.parseIdentifier(context);
             let annotatedType: TypeExpressionNode | undefined;
             let defaultValue: ExpressionNode | undefined;
@@ -1035,6 +1085,7 @@ class Parser {
                     identifier,
                     annotatedType,
                     defaultValue,
+                    annotations,
                     this.combineLocations(
                         identifier,
                         annotatedType,
@@ -1062,6 +1113,8 @@ class Parser {
         }
 
         const body = this.parseBlockStatement(context);
+        const copyAnnotations = [...annotations];
+        annotations.length = 0;
 
         return new FunctionDeclarationNode(
             identifier,
@@ -1069,8 +1122,10 @@ class Parser {
             parameters,
             accessModifier,
             functionModifiers,
+            copyAnnotations,
             body,
             this.combineLocations(
+                ...copyAnnotations,
                 accessModifier,
                 functionModifiers,
                 token,
@@ -1081,10 +1136,15 @@ class Parser {
     }
 
     protected parseClassPropertyDeclaration(
-        context: ParserContext
+        context: ParserContext,
+        annotations: AnnotationNode[]
     ): ClassPropertyDeclarationNode {
         const modifiers = this.parseClassMemberModifiers(context);
         const declaration = this.parseVariableDeclaration(context);
+        context.assertStackEmpty();
+
+        const copyAnnotations = [...annotations];
+        annotations.length = 0;
 
         return new ClassPropertyDeclarationNode(
             declaration.kind,
@@ -1093,15 +1153,33 @@ class Parser {
             declaration.accessModifier,
             modifiers as unknown as ModifierListNode<ClassPropertyModifier>,
             declaration.defaultValue,
-            this.combineLocations(modifiers, declaration)
+            copyAnnotations,
+            this.combineLocations(...copyAnnotations, modifiers, declaration)
         );
     }
 
     protected parseClassMethodDeclaration(
-        context: ParserContext
+        context: ParserContext,
+        annotations: AnnotationNode[]
     ): ClassMethodDeclarationNode {
         const modifiers = this.parseClassMemberModifiers(context);
-        const declaration = this.parseFunctionDeclaration(context);
+        const declaration = this.parseFunctionDeclaration(context, []);
+        context.assertStackEmpty();
+
+        if (declaration.annotations.length) {
+            this.diagnostic({
+                code: DiagnosticCode.IllegalAnnotationApplication,
+                level: DiagnosticLevel.Error,
+                location:
+                    declaration.annotations.at(0)?.location ??
+                    declaration.location,
+                message: "Annotation application is not allowed here"
+            });
+        }
+
+        const copyAnnotations = [...annotations];
+        declaration.annotations.length = 0;
+        annotations.length = 0;
 
         return new ClassMethodDeclarationNode(
             declaration.identifier,
@@ -1110,8 +1188,9 @@ class Parser {
             declaration.accessModifier,
             modifiers as unknown as ModifierListNode<ClassMethodModifier>,
             declaration.functionModifiers,
+            copyAnnotations,
             declaration.body,
-            this.combineLocations(modifiers, declaration)
+            this.combineLocations(...copyAnnotations, modifiers, declaration)
         );
     }
 
@@ -1119,6 +1198,7 @@ class Parser {
         context: ParserContext
     ): ClassMethodDeclarationNode | ClassPropertyDeclarationNode {
         let node: ClassMethodDeclarationNode | ClassPropertyDeclarationNode;
+        const annotations = this.parseAnnotations(context);
 
         this.bufferModifiers(context);
 
@@ -1126,15 +1206,19 @@ class Parser {
             case TokenType.Final:
             case TokenType.Const:
             case TokenType.Let:
-                node = this.parseClassPropertyDeclaration(context);
+                node = this.parseClassPropertyDeclaration(context, annotations);
                 break;
 
             case TokenType.Function:
-                node = this.parseClassMethodDeclaration(context);
+                node = this.parseClassMethodDeclaration(context, annotations);
                 break;
 
             default:
                 context.unexpected(context.peek());
+        }
+
+        if (annotations.length) {
+            context.unexpected(context.peek());
         }
 
         this.trimSemicolons(context, undefined, node);
@@ -1142,7 +1226,8 @@ class Parser {
     }
 
     protected parseClassDeclaration(
-        context: ParserContext
+        context: ParserContext,
+        annotations: AnnotationNode[]
     ): ClassDeclarationNode {
         const accessModifier = this.parseDeclarationAccessModifier(context);
         context.assertStackEmpty();
@@ -1181,6 +1266,9 @@ class Parser {
         }
 
         context.expect([TokenType.BraceClose]);
+        const copyAnnotations = [...annotations];
+        annotations.length = 0;
+
         return new ClassDeclarationNode(
             new ClassKindNode(
                 kindToken?.type === TokenType.Annotation
@@ -1195,6 +1283,7 @@ class Parser {
             identifier,
             properties,
             methods,
+            copyAnnotations,
             this.combineLocations(
                 kindToken,
                 classToken,
@@ -1202,7 +1291,8 @@ class Parser {
                 classModifiers,
                 identifier,
                 ...properties.values(),
-                ...methods.values()
+                ...methods.values(),
+                ...copyAnnotations
             )
         );
     }
@@ -1257,6 +1347,103 @@ class Parser {
                 identifier
             )
         );
+    }
+
+    protected parsePackageDeclaration(context: ParserContext): AbstractNode {
+        const packageToken = context.expect([TokenType.Package]);
+        const path: IdentifierNode[] = [];
+
+        while (context.peek()?.type === TokenType.Identifier) {
+            path.push(this.parseIdentifier(context));
+
+            if (
+                context.peek()?.type !== TokenType.Semicolon &&
+                context.peek(1)?.type === TokenType.Identifier
+            ) {
+                context.expect([TokenType.Dot]);
+            }
+        }
+
+        return new PackageDeclarationNode(
+            path,
+            this.combineLocations(packageToken, ...path)
+        );
+    }
+
+    /* Statement parsing. */
+
+    protected trimSemicolons(
+        context: ParserContext,
+        semicolon: boolean = context.semicolon,
+        node?: AbstractNode
+    ) {
+        if (
+            semicolon &&
+            node &&
+            !this.noSemicolonStatementTypes.includes(node.type)
+        ) {
+            context.expect([TokenType.Semicolon]);
+        }
+
+        if (semicolon) {
+            while (
+                !context.isEOF() &&
+                context.peek()?.type === TokenType.Semicolon
+            ) {
+                context.consume();
+            }
+        }
+    }
+
+    protected parseStatement(context: ParserContext): AbstractNode {
+        let node: AbstractNode | null = this.parseDeclaration(context);
+
+        if (node) {
+            return node;
+        }
+
+        context.assertStackEmpty();
+
+        switch (context.peek()?.type) {
+            case TokenType.If:
+                node = this.parseIfStatement(context);
+                break;
+
+            case TokenType.For:
+                node = this.parseForStatement(context);
+                break;
+
+            case TokenType.While:
+                node = this.parseWhileStatement(context);
+                break;
+
+            case TokenType.Return:
+                node = this.parseReturnStatement(context);
+                break;
+
+            case TokenType.BraceOpen:
+                node = this.parseBlockStatement(context);
+                break;
+
+            case TokenType.Semicolon:
+                node = this.parseEmptyStatement(context);
+                break;
+
+            case TokenType.Import:
+                node = this.parseImportStatement(context);
+                break;
+
+            default:
+                const expression = this.parseExpression(context);
+                node = new ExpressionStatementNode(
+                    expression,
+                    expression.location
+                );
+                break;
+        }
+
+        this.trimSemicolons(context, context.semicolon, node);
+        return node;
     }
 
     protected parseReturnStatement(context: ParserContext): AbstractNode {
@@ -1374,43 +1561,6 @@ class Parser {
         );
     }
 
-    protected parseRangeExpression(context: ParserContext): ExpressionNode {
-        const left = this.parseBasicBinaryExpression(context);
-
-        if (
-            context.peek()?.type !== TokenType.DotDot &&
-            (context.peek()?.type !== TokenType.Not ||
-                context.peek(1)?.type !== TokenType.DotDot)
-        ) {
-            return left;
-        }
-
-        let leftInclusive = true,
-            rightInclusive = true;
-
-        const token = context.expect([TokenType.DotDot, TokenType.Not]);
-
-        if (token?.type === TokenType.Not) {
-            leftInclusive = false;
-            context.expect([TokenType.DotDot]);
-        }
-
-        if (context.peek()?.type === TokenType.Not) {
-            rightInclusive = false;
-            context.consume();
-        }
-
-        const right = this.parseBasicBinaryExpression(context);
-
-        return new RangeExpressionNode(
-            left,
-            right,
-            leftInclusive,
-            rightInclusive,
-            this.combineLocations(left, right)
-        );
-    }
-
     protected parseIfStatement(context: ParserContext): AbstractNode {
         const ifToken = context.expect([TokenType.If]);
         context.expect([TokenType.ParenthesisOpen]);
@@ -1491,143 +1641,6 @@ class Parser {
         }
 
         return new EmptyStatementNode(token.location);
-    }
-
-    protected parsePackageDeclaration(context: ParserContext): AbstractNode {
-        const packageToken = context.expect([TokenType.Package]);
-        const path: IdentifierNode[] = [];
-
-        while (context.peek()?.type === TokenType.Identifier) {
-            path.push(this.parseIdentifier(context));
-
-            if (
-                context.peek()?.type !== TokenType.Semicolon &&
-                context.peek(1)?.type === TokenType.Identifier
-            ) {
-                context.expect([TokenType.Dot]);
-            }
-        }
-
-        return new PackageDeclarationNode(
-            path,
-            this.combineLocations(packageToken, ...path)
-        );
-    }
-
-    protected trimSemicolons(
-        context: ParserContext,
-        semicolon: boolean = context.semicolon,
-        node?: AbstractNode
-    ) {
-        if (
-            semicolon &&
-            node &&
-            !this.noSemicolonStatementTypes.includes(node.type)
-        ) {
-            context.expect([TokenType.Semicolon]);
-        }
-
-        if (semicolon) {
-            while (
-                !context.isEOF() &&
-                context.peek()?.type === TokenType.Semicolon
-            ) {
-                context.consume();
-            }
-        }
-    }
-
-    protected bufferModifiers(context: ParserContext) {
-        while (
-            this.modifierTokens.includes(
-                context.peek()?.type as TokenType.Public
-            )
-        ) {
-            context.tokenStack.push(context.consume()!);
-        }
-    }
-
-    protected parseDeclaration(context: ParserContext): DeclarationNode | null {
-        let node: DeclarationNode;
-
-        this.bufferModifiers(context);
-
-        switch (context.peek()?.type) {
-            case TokenType.Let:
-            case TokenType.Const:
-            case TokenType.Final:
-                node = this.parseVariableDeclaration(context);
-                break;
-
-            case TokenType.Function:
-                node = this.parseFunctionDeclaration(context);
-                break;
-
-            case TokenType.Record:
-            case TokenType.Annotation:
-            case TokenType.Class:
-                node = this.parseClassDeclaration(context);
-                break;
-
-            case TokenType.Package:
-                node = this.parsePackageDeclaration(context);
-                break;
-
-            default:
-                return null;
-        }
-
-        this.trimSemicolons(context, context.semicolon, node);
-        return node;
-    }
-
-    protected parseStatement(context: ParserContext): AbstractNode {
-        let node: AbstractNode | null = this.parseDeclaration(context);
-
-        if (node) {
-            return node;
-        }
-
-        switch (context.peek()?.type) {
-            case TokenType.If:
-                node = this.parseIfStatement(context);
-                break;
-
-            case TokenType.For:
-                node = this.parseForStatement(context);
-                break;
-
-            case TokenType.While:
-                node = this.parseWhileStatement(context);
-                break;
-
-            case TokenType.Return:
-                node = this.parseReturnStatement(context);
-                break;
-
-            case TokenType.BraceOpen:
-                node = this.parseBlockStatement(context);
-                break;
-
-            case TokenType.Semicolon:
-                node = this.parseEmptyStatement(context);
-                break;
-
-            case TokenType.Import:
-                node = this.parseImportStatement(context);
-                break;
-
-            default:
-                const expression = this.parseExpression(context);
-                node = new ExpressionStatementNode(
-                    expression,
-                    expression.location
-                );
-                break;
-        }
-
-        this.trimSemicolons(context, context.semicolon, node);
-        return node;
     }
 }
 

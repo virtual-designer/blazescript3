@@ -33,7 +33,8 @@ enum NodeType {
     Keyword,
     MemberAccessExpression,
     NewExpression,
-    PackageDeclaration
+    PackageDeclaration,
+    Annotation
 }
 
 export default NodeType;

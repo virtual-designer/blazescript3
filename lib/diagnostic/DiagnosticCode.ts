@@ -11,5 +11,6 @@ export enum DiagnosticCode {
     ModifiersNotAllowed,
     ModifierNotApplicable,
     InvalidReturn,
-    IllegalAssignment
+    IllegalAssignment,
+    IllegalAnnotationApplication
 }

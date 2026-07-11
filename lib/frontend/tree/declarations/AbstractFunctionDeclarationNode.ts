@@ -4,6 +4,7 @@ import type { TypeExpressionNode } from "../expressions/TypeExpressionNode.ts";
 import type { Location } from "../Location.ts";
 import type BlockStatementNode from "../statements/BlockStatementNode.ts";
 import type AccessModifierNode from "./AccessModifierNode.ts";
+import type AnnotationNode from "./AnnotationNode.ts";
 import { FunctionDeclarationModifier } from "./FunctionDeclarationModifier.ts";
 import type FunctionParameterDeclarationNode from "./FunctionParameterDeclarationNode.ts";
 import type ModifierListNode from "./ModifierListNode.ts";
@@ -14,6 +15,7 @@ abstract class AbstractFunctionDeclarationNode extends DeclarationNode {
     public readonly parameters: FunctionParameterDeclarationNode[];
     public readonly accessModifier: AccessModifierNode | null;
     public readonly functionModifiers: ModifierListNode<FunctionDeclarationModifier> | null;
+    public readonly annotations: AnnotationNode[];
     public readonly body: BlockStatementNode;
 
     public constructor(
@@ -22,6 +24,7 @@ abstract class AbstractFunctionDeclarationNode extends DeclarationNode {
         parameters: FunctionParameterDeclarationNode[],
         accessModifier: AccessModifierNode | null,
         functionModifiers: ModifierListNode<FunctionDeclarationModifier> | null,
+        annotations: AnnotationNode[],
         body: BlockStatementNode,
         location: Location
     ) {
@@ -31,6 +34,7 @@ abstract class AbstractFunctionDeclarationNode extends DeclarationNode {
         this.parameters = parameters;
         this.accessModifier = accessModifier;
         this.functionModifiers = functionModifiers;
+        this.annotations = annotations;
         this.body = body;
     }
 
@@ -42,6 +46,7 @@ abstract class AbstractFunctionDeclarationNode extends DeclarationNode {
             this.identifier,
             this.returnType,
             ...this.parameters,
+            ...this.annotations,
             this.body
         ];
     }

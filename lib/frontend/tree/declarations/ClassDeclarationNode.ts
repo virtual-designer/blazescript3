@@ -3,6 +3,7 @@ import type IdentifierNode from "../expressions/IdentifierNode.ts";
 import type { Location } from "../Location.ts";
 import NodeType from "../NodeType.ts";
 import type AccessModifierNode from "./AccessModifierNode.ts";
+import type AnnotationNode from "./AnnotationNode.ts";
 import type ClassKindNode from "./ClassKindNode.ts";
 import type ClassMethodDeclarationNode from "./ClassMethodDeclarationNode.ts";
 import type { ClassModifier } from "./ClassModifier.ts";
@@ -17,6 +18,7 @@ class ClassDeclarationNode extends DeclarationNode {
     public readonly identifier: IdentifierNode;
     public readonly properties: Map<string, ClassPropertyDeclarationNode>;
     public readonly methods: Map<string, ClassMethodDeclarationNode>;
+    public readonly annotations: AnnotationNode[];
 
     public constructor(
         kind: ClassKindNode,
@@ -25,6 +27,7 @@ class ClassDeclarationNode extends DeclarationNode {
         identifier: IdentifierNode,
         properties: Map<string, ClassPropertyDeclarationNode>,
         methods: Map<string, ClassMethodDeclarationNode>,
+        annotations: AnnotationNode[],
         location: Location
     ) {
         super(location);
@@ -34,6 +37,7 @@ class ClassDeclarationNode extends DeclarationNode {
         this.identifier = identifier;
         this.properties = properties;
         this.methods = methods;
+        this.annotations = annotations;
     }
 
     public override branches() {
@@ -44,7 +48,8 @@ class ClassDeclarationNode extends DeclarationNode {
             this.modifiers,
             this.identifier,
             ...this.properties.values(),
-            ...this.methods.values()
+            ...this.methods.values(),
+            ...this.annotations
         ];
     }
 }

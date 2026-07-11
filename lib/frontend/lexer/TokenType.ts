@@ -75,7 +75,8 @@ enum TokenType {
     New,
     QuestionMark,
     Package,
-    Static
+    Static,
+    At
 }
 
 export default TokenType;

@@ -5,6 +5,7 @@ import type { Location } from "../Location.ts";
 import NodeType from "../NodeType.ts";
 import AbstractVariableDeclarationNode from "./AbstractVariableDeclarationNode.ts";
 import type AccessModifierNode from "./AccessModifierNode.ts";
+import type AnnotationNode from "./AnnotationNode.ts";
 import type { ClassPropertyModifier } from "./ClassPropertyModifier.ts";
 import type ModifierListNode from "./ModifierListNode.ts";
 import type VariableDeclarationKindNode from "./VariableDeclarationKindNode.ts";
@@ -12,6 +13,7 @@ import type VariableDeclarationKindNode from "./VariableDeclarationKindNode.ts";
 class ClassPropertyDeclarationNode extends AbstractVariableDeclarationNode {
     public override readonly type = NodeType.ClassPropertyDeclaration;
     public readonly modifiers: ModifierListNode<ClassPropertyModifier> | null;
+    public readonly annotations: AnnotationNode[];
 
     public constructor(
         kind: VariableDeclarationKindNode,
@@ -20,6 +22,7 @@ class ClassPropertyDeclarationNode extends AbstractVariableDeclarationNode {
         accessModifier: AccessModifierNode | null,
         modifiers: ModifierListNode<ClassPropertyModifier> | null,
         defaultValue: ExpressionNode | undefined,
+        annotations: AnnotationNode[],
         location: Location
     ) {
         super(
@@ -32,10 +35,11 @@ class ClassPropertyDeclarationNode extends AbstractVariableDeclarationNode {
         );
 
         this.modifiers = modifiers;
+        this.annotations = annotations;
     }
 
     public override branches() {
-        return [...super.branches(), this.modifiers];
+        return [...super.branches(), this.modifiers, ...this.annotations];
     }
 }
 

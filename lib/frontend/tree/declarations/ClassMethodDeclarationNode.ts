@@ -5,6 +5,7 @@ import NodeType from "../NodeType.ts";
 import type BlockStatementNode from "../statements/BlockStatementNode.ts";
 import AbstractFunctionDeclarationNode from "./AbstractFunctionDeclarationNode.ts";
 import type AccessModifierNode from "./AccessModifierNode.ts";
+import type AnnotationNode from "./AnnotationNode.ts";
 import type { ClassMethodModifier } from "./ClassMethodModifier.ts";
 import type { FunctionDeclarationModifier } from "./FunctionDeclarationModifier.ts";
 import type FunctionParameterDeclarationNode from "./FunctionParameterDeclarationNode.ts";
@@ -21,6 +22,7 @@ class ClassMethodDeclarationNode extends AbstractFunctionDeclarationNode {
         accessModifier: AccessModifierNode | null,
         modifiers: ModifierListNode<ClassMethodModifier> | null,
         functionModifiers: ModifierListNode<FunctionDeclarationModifier> | null,
+        annotations: AnnotationNode[],
         body: BlockStatementNode,
         location: Location
     ) {
@@ -30,6 +32,7 @@ class ClassMethodDeclarationNode extends AbstractFunctionDeclarationNode {
             parameters,
             accessModifier,
             functionModifiers,
+            annotations,
             body,
             location
         );
