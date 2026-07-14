@@ -1,6 +1,7 @@
 import ESTree from "estree";
 import { AccessModifier } from "../../frontend/tree/declarations/AccessModifier.ts";
 import ClassDeclarationNode from "../../frontend/tree/declarations/ClassDeclarationNode.ts";
+import type { EmitterResult } from "../EmitterResult.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
 import ClassMethodDeclarationEmitter from "./ClassMethodDeclarationEmitter.ts";
@@ -16,25 +17,31 @@ class ClassDeclarationEmitter extends ESTreeEmitter<
     public override emit(
         node: ClassDeclarationNode,
         context: TransformerContext
-    ): ESTree.ClassDeclaration | ESTree.ExportNamedDeclaration {
-        const declaration: ESTree.ClassDeclaration = {
+    ): EmitterResult<ESTree.ClassDeclaration | ESTree.ExportNamedDeclaration> {
+        const identifier = this.transformer
+            .getEmitter(IdentifierEmitter)
+            .emit(node.identifier, context);
+        const properties = Array.from(node.properties.values(), property =>
+            this.transformer
+                .getEmitter(ClassPropertyDeclarationEmitter)
+                .emit(property, context)
+        );
+        const methods = Array.from(node.methods.values(), method =>
+            this.transformer
+                .getEmitter(ClassMethodDeclarationEmitter)
+                .emit(method, context)
+        );
+
+        let declaration:
+            | ESTree.ClassDeclaration
+            | ESTree.ExportNamedDeclaration = {
             type: "ClassDeclaration",
-            id: this.transformer
-                .getEmitter(IdentifierEmitter)
-                .emit(node.identifier, context),
+            id: identifier.node,
             body: {
                 type: "ClassBody",
                 body: [
-                    ...Array.from(node.properties.values(), property =>
-                        this.transformer
-                            .getEmitter(ClassPropertyDeclarationEmitter)
-                            .emit(property, context)
-                    ),
-                    ...Array.from(node.methods.values(), method =>
-                        this.transformer
-                            .getEmitter(ClassMethodDeclarationEmitter)
-                            .emit(method, context)
-                    )
+                    ...properties.map(({ node }) => node),
+                    ...methods.map(({ node }) => node)
                 ]
             }
         };
@@ -43,10 +50,12 @@ class ClassDeclarationEmitter extends ESTreeEmitter<
             node.accessModifier &&
             node.accessModifier.value !== AccessModifier.Private
         ) {
-            return this.transformer.exportDeclaration(declaration);
+            declaration = this.transformer.exportDeclaration(
+                declaration as ESTree.ClassDeclaration
+            );
         }
 
-        return declaration;
+        return this.combine(declaration, identifier, ...properties, ...methods);
     }
 }
 

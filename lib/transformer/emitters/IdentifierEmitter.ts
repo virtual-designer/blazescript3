@@ -1,5 +1,6 @@
 import ESTree from "estree";
 import IdentifierNode from "../../frontend/tree/expressions/IdentifierNode.ts";
+import type { EmitterResult } from "../EmitterResult.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
 
@@ -12,11 +13,11 @@ class IdentifierEmitter extends ESTreeEmitter<
     public override emit(
         node: IdentifierNode,
         _context: TransformerContext
-    ): ESTree.Identifier {
-        return {
+    ): EmitterResult<ESTree.Identifier> {
+        return this.combine({
             type: "Identifier",
             name: node.symbol
-        };
+        });
     }
 }
 

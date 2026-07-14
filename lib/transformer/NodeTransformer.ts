@@ -5,6 +5,7 @@ import ExpressionNode from "../frontend/tree/ExpressionNode.ts";
 import BinaryOperator from "../frontend/tree/expressions/BinaryOperator.ts";
 import StatementNode from "../frontend/tree/StatementNode.ts";
 import ExpressionStatementNode from "../frontend/tree/statements/ExpressionStatementNode.ts";
+import type { EmitterResult } from "./EmitterResult.ts";
 import AssignmentExpressionEmitter from "./emitters/AssignmentExpressionEmitter.ts";
 import AwaitExpressionEmitter from "./emitters/AwaitExpressionEmitter.ts";
 import BinaryExpressionEmitter from "./emitters/BinaryExpressionEmitter.ts";
@@ -32,7 +33,7 @@ import RootEmitter from "./emitters/RootEmitter.ts";
 import UnaryExpressionEmitter from "./emitters/UnaryExpressionEmitter.ts";
 import VariableDeclarationEmitter from "./emitters/VariableDeclarationEmitter.ts";
 import WhileStatementEmitter from "./emitters/WhileStatementEmitter.ts";
-import type { ESTreeEmitter } from "./ESTreeEmitter.ts";
+import { ESTreeEmitter } from "./ESTreeEmitter.ts";
 import type { TransformerContext } from "./TransformerContext.ts";
 
 type EmitterClass = new (
@@ -144,30 +145,35 @@ class NodeTransformer {
     public transformStatement(
         node: StatementNode | DeclarationNode,
         context: TransformerContext
-    ): ESTree.Statement {
+    ): EmitterResult<ESTree.Statement> {
         const emitter = this.getEmitterByNode(node);
 
         if (node instanceof ExpressionNode) {
-            return {
-                type: "ExpressionStatement",
-                expression: this.transformExpression(
-                    node instanceof ExpressionStatementNode
-                        ? node.expression
-                        : node,
-                    context
-                )
-            } satisfies ESTree.ExpressionStatement;
+            const expression = this.transformExpression(
+                node instanceof ExpressionStatementNode
+                    ? node.expression
+                    : node,
+                context
+            );
+
+            return ESTreeEmitter.combineResult(
+                {
+                    type: "ExpressionStatement",
+                    expression: expression.node
+                } satisfies ESTree.ExpressionStatement,
+                expression
+            );
         }
 
-        return emitter.emit(node, context) as ESTree.Statement;
+        return emitter.emit(node, context) as EmitterResult<ESTree.Statement>;
     }
 
     public transformExpression(
         node: ExpressionNode,
         context: TransformerContext
-    ): ESTree.Expression {
+    ): EmitterResult<ESTree.Expression> {
         const emitter = this.getEmitterByNode(node);
-        return emitter.emit(node, context) as ESTree.Expression;
+        return emitter.emit(node, context) as EmitterResult<ESTree.Expression>;
     }
 
     public transformJSBinaryOperation(
@@ -218,7 +224,7 @@ class NodeTransformer {
     public transformBlockChild(
         node: AbstractNode,
         context: TransformerContext
-    ): ESTree.Statement {
+    ) {
         const esNode = this.transformStatement(node, context);
         return esNode;
     }

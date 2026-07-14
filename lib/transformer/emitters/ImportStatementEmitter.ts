@@ -2,6 +2,7 @@ import ESTree from "estree";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import ImportStatementNode from "../../frontend/tree/statements/ImportStatementNode.ts";
+import type { EmitterResult } from "../EmitterResult.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
 import IdentifierEmitter from "./IdentifierEmitter.ts";
@@ -15,7 +16,7 @@ class ImportStatementEmitter extends ESTreeEmitter<
     public override emit(
         node: ImportStatementNode,
         context: TransformerContext
-    ): ESTree.ImportDeclaration {
+    ): EmitterResult<ESTree.ImportDeclaration> {
         let filepath = [
             ...node.path.map(id => id.symbol),
             `${node.identifier.symbol}.js`
@@ -54,25 +55,28 @@ class ImportStatementEmitter extends ESTreeEmitter<
             : filepath;
         filepath = filepath.startsWith("/") ? filepath : "./" + filepath;
 
-        return {
-            type: "ImportDeclaration",
-            source: {
-                type: "Literal",
-                value: filepath
+        const identifier = this.transformer
+            .getEmitter(IdentifierEmitter)
+            .emit(node.identifier, context);
+
+        return this.combine(
+            {
+                type: "ImportDeclaration",
+                source: {
+                    type: "Literal",
+                    value: filepath
+                },
+                specifiers: [
+                    {
+                        type: "ImportSpecifier",
+                        local: identifier.node,
+                        imported: identifier.node
+                    }
+                ],
+                attributes: []
             },
-            specifiers: [
-                {
-                    type: "ImportSpecifier",
-                    local: this.transformer
-                        .getEmitter(IdentifierEmitter)
-                        .emit(node.identifier, context),
-                    imported: this.transformer
-                        .getEmitter(IdentifierEmitter)
-                        .emit(node.identifier, context)
-                }
-            ],
-            attributes: []
-        };
+            identifier
+        );
     }
 }
 

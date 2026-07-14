@@ -1,5 +1,6 @@
 import ESTree from "estree";
 import BinaryExpressionNode from "../../frontend/tree/expressions/BinaryExpressionNode.ts";
+import type { EmitterResult } from "../EmitterResult.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
 
@@ -12,11 +13,18 @@ class BinaryExpressionEmitter extends ESTreeEmitter<
     public override emit(
         node: BinaryExpressionNode,
         context: TransformerContext
-    ): ESTree.BinaryExpression {
-        return this.transformer.transformJSBinaryOperation(
-            node.operator,
-            this.transformer.transformExpression(node.left, context),
-            this.transformer.transformExpression(node.right, context)
+    ): EmitterResult<ESTree.BinaryExpression> {
+        const left = this.transformer.transformExpression(node.left, context);
+        const right = this.transformer.transformExpression(node.right, context);
+
+        return this.combine(
+            this.transformer.transformJSBinaryOperation(
+                node.operator,
+                left.node,
+                right.node
+            ),
+            left,
+            right
         );
     }
 }

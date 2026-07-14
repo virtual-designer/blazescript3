@@ -1,5 +1,6 @@
 import ESTree from "estree";
 import LiteralNode from "../../frontend/tree/expressions/LiteralNode.ts";
+import type { EmitterResult } from "../EmitterResult.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
 
@@ -9,10 +10,12 @@ class LiteralEmitter extends ESTreeEmitter<LiteralNode, ESTree.Literal> {
     public override emit(
         node: LiteralNode,
         _context: TransformerContext
-    ): ESTree.Literal {
+    ): EmitterResult<ESTree.Literal> {
         return {
-            type: "Literal",
-            value: node.getJSValue()
+            node: {
+                type: "Literal",
+                value: node.getJSValue()
+            }
         };
     }
 }

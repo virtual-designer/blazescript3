@@ -1,5 +1,6 @@
 import ESTree from "estree";
 import EmptyStatementNode from "../../frontend/tree/statements/EmptyStatementNode.ts";
+import type { EmitterResult } from "../EmitterResult.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
 
@@ -12,9 +13,11 @@ class EmptyStatementEmitter extends ESTreeEmitter<
     public override emit(
         _node: EmptyStatementNode,
         _context: TransformerContext
-    ): ESTree.EmptyStatement {
+    ): EmitterResult<ESTree.EmptyStatement> {
         return {
-            type: "EmptyStatement"
+            node: {
+                type: "EmptyStatement"
+            }
         };
     }
 }

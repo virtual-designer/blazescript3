@@ -2,6 +2,7 @@ import ESTree from "estree";
 import { AccessModifier } from "../../frontend/tree/declarations/AccessModifier.ts";
 import { FunctionDeclarationModifier } from "../../frontend/tree/declarations/FunctionDeclarationModifier.ts";
 import FunctionDeclarationNode from "../../frontend/tree/declarations/FunctionDeclarationNode.ts";
+import type { EmitterResult } from "../EmitterResult.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
 import BlockStatementEmitter from "./BlockStatementEmitter.ts";
@@ -16,35 +17,53 @@ class FunctionDeclarationEmitter extends ESTreeEmitter<
     public override emit(
         node: FunctionDeclarationNode,
         context: TransformerContext
-    ): ESTree.FunctionDeclaration | ESTree.ExportNamedDeclaration {
-        const functionDeclaration: ESTree.FunctionDeclaration = {
-            type: "FunctionDeclaration",
-            id: this.transformer
+    ): EmitterResult<
+        ESTree.FunctionDeclaration | ESTree.ExportNamedDeclaration
+    > {
+        const params = node.parameters.map(p => {
+            if (!p.defaultValue) {
+                return this.transformer
+                    .getEmitter(IdentifierEmitter)
+                    .emit(p.identifier, context) satisfies EmitterResult<
+                    ESTree.FunctionDeclaration["params"][number]
+                >;
+            }
+
+            const left = this.transformer
                 .getEmitter(IdentifierEmitter)
-                .emit(node.identifier, context),
-            body: this.transformer
-                .getEmitter(BlockStatementEmitter)
-                .emit(node.body, context),
-            params: node.parameters.map(
-                p =>
-                    (p.defaultValue
-                        ? {
-                              type: "AssignmentPattern",
-                              left: this.transformer
-                                  .getEmitter(IdentifierEmitter)
-                                  .emit(p.identifier, context),
-                              right: this.transformer.transformExpression(
-                                  p.defaultValue,
-                                  context
-                              )
-                          }
-                        : this.transformer
-                              .getEmitter(IdentifierEmitter)
-                              .emit(
-                                  p.identifier,
-                                  context
-                              )) satisfies ESTree.FunctionDeclaration["params"][number]
-            ),
+                .emit(p.identifier, context);
+
+            const right = this.transformer.transformExpression(
+                p.defaultValue,
+                context
+            );
+
+            return this.combine(
+                {
+                    type: "AssignmentPattern",
+                    left: left.node,
+                    right: right.node
+                },
+                left,
+                right
+            );
+        });
+
+        const body = this.transformer
+            .getEmitter(BlockStatementEmitter)
+            .emit(node.body, context);
+
+        const identifier = this.transformer
+            .getEmitter(IdentifierEmitter)
+            .emit(node.identifier, context);
+
+        let declaration:
+            | ESTree.FunctionDeclaration
+            | ESTree.ExportNamedDeclaration = {
+            type: "FunctionDeclaration",
+            id: identifier.node,
+            body: body.node,
+            params: params.map(({ node }) => node),
             async:
                 node.functionModifiers?.has(
                     FunctionDeclarationModifier.Async
@@ -55,10 +74,12 @@ class FunctionDeclarationEmitter extends ESTreeEmitter<
             node.accessModifier &&
             node.accessModifier.value !== AccessModifier.Private
         ) {
-            return this.transformer.exportDeclaration(functionDeclaration);
+            declaration = this.transformer.exportDeclaration(
+                declaration as ESTree.FunctionDeclaration
+            );
         }
 
-        return functionDeclaration;
+        return this.combine(declaration, identifier, ...params, body);
     }
 }
 

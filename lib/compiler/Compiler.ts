@@ -105,7 +105,7 @@ class Compiler {
         }
 
         const generatedCodeString = compiledJSNodes
-            .map(node => this.generator.generate(node))
+            .map(({ node }) => this.generator.generate(node))
             .join("\n");
 
         const outputFile = tx.getOutputFile();
