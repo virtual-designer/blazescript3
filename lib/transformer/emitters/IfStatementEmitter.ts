@@ -19,13 +19,14 @@ class IfStatementEmitter extends ESTreeEmitter<
             context
         );
 
-        const thenBlock = this.transformer.transformStatement(
-            node.thenBlock,
-            context
+        let thenBlock = this.terminateOrBlock(
+            this.transformer.transformStatement(node.thenBlock, context)
         );
 
-        const elseBlock = node.elseBlock
-            ? this.transformer.transformStatement(node.elseBlock, context)
+        let elseBlock = node.elseBlock
+            ? this.terminateOrBlock(
+                  this.transformer.transformStatement(node.elseBlock, context)
+              )
             : undefined;
 
         return this.combine(

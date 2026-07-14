@@ -23,7 +23,9 @@ class ForStatementEmitter extends ESTreeEmitter<
         const update = node.mutator
             ? this.transformer.transformExpression(node.mutator, context)
             : undefined;
-        const body = this.transformer.transformStatement(node.body, context);
+        const body = this.terminateOrBlock(
+            this.transformer.transformStatement(node.body, context)
+        );
 
         return this.combine(
             {

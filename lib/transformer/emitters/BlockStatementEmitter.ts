@@ -18,13 +18,16 @@ class BlockStatementEmitter extends ESTreeEmitter<
             this.transformer.transformBlockChild(c, context)
         );
 
-        return this.combine(
-            {
-                type: "BlockStatement",
-                body: body.map(({ node }) => node)
-            },
-            ...body
-        );
+        return this.combine({
+            type: "BlockStatement",
+            body: body
+                .map(({ nextNodes, node, previousNodes }) => [
+                    ...(previousNodes ?? []),
+                    node,
+                    ...(nextNodes ?? [])
+                ])
+                .flat() as ESTree.Statement[]
+        });
     }
 }
 

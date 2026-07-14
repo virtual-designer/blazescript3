@@ -15,9 +15,8 @@ class ForInStatementEmitter extends ESTreeEmitter<
         node: ForInStatementNode,
         context: TransformerContext
     ): EmitterResult<ESTree.ForOfStatement> {
-        const statement = this.transformer.transformStatement(
-            node.body,
-            context
+        const statement = this.terminateOrBlock(
+            this.transformer.transformStatement(node.body, context)
         );
 
         const variableDeclaration = this.transformer
@@ -34,7 +33,7 @@ class ForInStatementEmitter extends ESTreeEmitter<
                 type: "ForOfStatement",
                 body: statement.node,
                 await: false,
-                left: variableDeclaration.node,
+                left: variableDeclaration.node as ESTree.VariableDeclaration,
                 right: right.node
             },
             variableDeclaration,

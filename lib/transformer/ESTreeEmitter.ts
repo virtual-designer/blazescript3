@@ -70,6 +70,25 @@ export abstract class ESTreeEmitter<
         return ESTreeEmitter.combineTo(previousNodes, nextNodes, ...results);
     }
 
+    protected terminateOrBlock<T extends ESTree.BaseNode>(
+        result: EmitterResult<T>
+    ): EmitterResult<T | ESTree.BlockStatement> {
+        if (result.nextNodes?.length || result.previousNodes?.length) {
+            return {
+                node: {
+                    type: "BlockStatement",
+                    body: [
+                        ...(result.previousNodes ?? []),
+                        result.node,
+                        ...(result.nextNodes ?? [])
+                    ] as ESTree.Statement[]
+                }
+            };
+        }
+
+        return result;
+    }
+
     public abstract emit(
         node: S,
         context: TransformerContext

@@ -7,7 +7,7 @@ import NodeType from "../NodeType.ts";
 
 class AnnotationNode extends AbstractNode {
     public override readonly type = NodeType.Annotation;
-    public readonly target: IdentifierNode | MemberAccessExpressionNode;
+    public readonly callee: IdentifierNode | MemberAccessExpressionNode;
     public readonly args: ExpressionNode[];
 
     public constructor(
@@ -16,7 +16,7 @@ class AnnotationNode extends AbstractNode {
         location: Location
     ) {
         super(location);
-        this.target = target;
+        this.callee = target;
         this.args = args;
     }
 }

@@ -15,25 +15,17 @@ class RootEmitter extends ESTreeEmitter<RootNode, ESTree.Program> {
             this.transformer.transformBlockChild(c, context)
         );
 
-        const rawNodes: ESTree.BaseNode[] = body.map(({ node }) => node);
-
-        for (const child of body.reverse()) {
-            if (child.previousNodes?.length) {
-                rawNodes.unshift(...child.previousNodes);
-            }
-        }
-
-        for (const child of body) {
-            if (child.nextNodes?.length) {
-                rawNodes.unshift(...child.nextNodes);
-            }
-        }
-
         return {
             node: {
                 type: "Program",
                 sourceType: "script",
-                body: rawNodes as ESTree.Statement[]
+                body: body
+                    .map(({ nextNodes, node, previousNodes }) => [
+                        ...(previousNodes ?? []),
+                        node,
+                        ...(nextNodes ?? [])
+                    ])
+                    .flat() as ESTree.Statement[]
             }
         };
     }

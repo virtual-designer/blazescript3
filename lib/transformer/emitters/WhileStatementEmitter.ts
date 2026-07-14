@@ -18,7 +18,9 @@ class WhileStatementEmitter extends ESTreeEmitter<
             node.condition,
             context
         );
-        const body = this.transformer.transformStatement(node.body, context);
+        const body = this.terminateOrBlock(
+            this.transformer.transformStatement(node.body, context)
+        );
 
         return this.combine(
             {
