@@ -1,12 +1,12 @@
 import Tokenizer from "@lib/frontend/lexer/Tokenizer";
 import Parser from "@lib/frontend/parser/Parser";
-import BinaryExpressionNode from "@lib/frontend/tree/BinaryExpressionNode";
+import VariableDeclarationKind from "@lib/frontend/tree/declarations/VariableDeclarationKind";
+import VariableDeclarationNode from "@lib/frontend/tree/declarations/VariableDeclarationNode";
 import type ExpressionNode from "@lib/frontend/tree/ExpressionNode";
-import IdentifierNode from "@lib/frontend/tree/IdentifierNode";
-import LiteralNode from "@lib/frontend/tree/LiteralNode";
-import LiteralNodeKind from "@lib/frontend/tree/LiteralNodeKind";
-import VariableDeclarationKind from "@lib/frontend/tree/VariableDeclarationKind";
-import VariableDeclarationNode from "@lib/frontend/tree/VariableDeclarationNode";
+import BinaryExpressionNode from "@lib/frontend/tree/expressions/BinaryExpressionNode";
+import IdentifierNode from "@lib/frontend/tree/expressions/IdentifierNode";
+import LiteralNode from "@lib/frontend/tree/expressions/LiteralNode";
+import LiteralNodeKind from "@lib/frontend/tree/expressions/LiteralNodeKind";
 import { describe, expect, it } from "vitest";
 
 const FILENAME = "test.bl";
@@ -63,12 +63,15 @@ describe("Parser", () => {
         const parser = new Parser();
 
         const node = parser.parse(
-            tokenizer.tokenize(FILENAME, `final age = 186;\nfinal num: Float = 5.5;`)
+            tokenizer.tokenize(
+                FILENAME,
+                `final age = 186;\nfinal num: Float = 5.5;`
+            )
         );
-        
+
         node.traverse(node => {
             Object.defineProperty(node, "location", {
-                value: LOC,
+                value: LOC
             });
 
             return true;
@@ -79,14 +82,18 @@ describe("Parser", () => {
                 VariableDeclarationKind.Final,
                 new IdentifierNode("age", LOC),
                 undefined,
+                undefined,
                 new LiteralNode(LiteralNodeKind.Integer, "186", LOC),
+                false,
                 LOC
             ),
             new VariableDeclarationNode(
                 VariableDeclarationKind.Final,
                 new IdentifierNode("num", LOC),
                 new IdentifierNode("Float", LOC),
+                undefined,
                 new LiteralNode(LiteralNodeKind.Float, "5.5", LOC),
+                false,
                 LOC
             )
         ]);
