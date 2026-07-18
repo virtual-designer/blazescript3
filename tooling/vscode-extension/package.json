@@ -1,11 +1,17 @@
 {
     "name": "blazescript",
-    "displayName": "BlazeScript Language Support",
+    "displayName": "Language Support for BlazeScript",
     "description": "Language support extension for The BlazeScript Programming Language",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "engines": {
         "vscode": "^1.120.0"
     },
+    "author": {
+        "name": "Ar Rakin",
+        "email": "rakinar2@osndevs.org",
+        "url": "https://github.com/virtual-designer"
+    },
+    "publisher": "osn",
     "categories": [
         "Programming Languages"
     ],
@@ -13,6 +19,7 @@
         "type": "git",
         "url": "https://github.com/virtual-designer/blazescript3"
     },
+    "icon": "./logo.png",
     "contributes": {
         "languages": [
             {
