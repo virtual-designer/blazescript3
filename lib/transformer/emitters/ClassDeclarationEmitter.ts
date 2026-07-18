@@ -5,6 +5,7 @@ import ClassDeclarationNode from "../../frontend/tree/declarations/ClassDeclarat
 import type { EmitterResult } from "../EmitterResult.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
+import ClassConstructorDeclarationEmitter from "./ClassConstructorDeclarationEmitter.ts";
 import ClassMethodDeclarationEmitter from "./ClassMethodDeclarationEmitter.ts";
 import ClassPropertyDeclarationEmitter from "./ClassPropertyDeclarationEmitter.ts";
 import IdentifierEmitter from "./IdentifierEmitter.ts";
@@ -28,10 +29,17 @@ class ClassDeclarationEmitter extends ESTreeEmitter<
                 .getEmitter(ClassPropertyDeclarationEmitter)
                 .emit(property, context)
         );
+
         const methods = Array.from(node.methods.values(), method =>
             this.transformer
                 .getEmitter(ClassMethodDeclarationEmitter)
                 .emit(method, context)
+        );
+
+        const constructors = node.constructors.map(constructor =>
+            this.transformer
+                .getEmitter(ClassConstructorDeclarationEmitter)
+                .emit(constructor, context)
         );
 
         let declaration:
@@ -43,6 +51,7 @@ class ClassDeclarationEmitter extends ESTreeEmitter<
                 type: "ClassBody",
                 body: [
                     ...properties.map(({ node }) => node),
+                    ...constructors.map(({ node }) => node),
                     ...methods.map(({ node }) => node)
                 ]
             }
@@ -73,6 +82,7 @@ class ClassDeclarationEmitter extends ESTreeEmitter<
             declaration,
             identifier,
             ...properties,
+            ...constructors,
             ...methods
         );
 

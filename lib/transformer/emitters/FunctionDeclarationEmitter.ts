@@ -2,6 +2,7 @@ import ESTree from "estree";
 import { AccessModifier } from "../../frontend/tree/declarations/AccessModifier.ts";
 import { FunctionDeclarationModifier } from "../../frontend/tree/declarations/FunctionDeclarationModifier.ts";
 import FunctionDeclarationNode from "../../frontend/tree/declarations/FunctionDeclarationNode.ts";
+import type FunctionParameterDeclarationNode from "../../frontend/tree/declarations/FunctionParameterDeclarationNode.ts";
 import type { EmitterResult } from "../EmitterResult.ts";
 import { ESTreeEmitter } from "../ESTreeEmitter.ts";
 import type { TransformerContext } from "../TransformerContext.ts";
@@ -14,13 +15,11 @@ class FunctionDeclarationEmitter extends ESTreeEmitter<
 > {
     public override readonly NODE_TYPE = FunctionDeclarationNode;
 
-    public override emit(
-        node: FunctionDeclarationNode,
+    public emitParameterList(
+        parameters: FunctionParameterDeclarationNode[],
         context: TransformerContext
-    ): EmitterResult<
-        ESTree.FunctionDeclaration | ESTree.ExportNamedDeclaration
-    > {
-        const params = node.parameters.map(p => {
+    ) {
+        return parameters.map(p => {
             if (!p.defaultValue) {
                 return this.transformer
                     .getEmitter(IdentifierEmitter)
@@ -48,6 +47,15 @@ class FunctionDeclarationEmitter extends ESTreeEmitter<
                 right
             );
         });
+    }
+
+    public override emit(
+        node: FunctionDeclarationNode,
+        context: TransformerContext
+    ): EmitterResult<
+        ESTree.FunctionDeclaration | ESTree.ExportNamedDeclaration
+    > {
+        const params = this.emitParameterList(node.parameters, context);
 
         const body = this.transformer
             .getEmitter(BlockStatementEmitter)

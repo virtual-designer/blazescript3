@@ -1,3 +1,4 @@
+import ClassConstructorDeclarationNode from "./declarations/ClassConstructorDeclarationNode.ts";
 import ClassDeclarationNode from "./declarations/ClassDeclarationNode.ts";
 import ClassMethodDeclarationNode from "./declarations/ClassMethodDeclarationNode.ts";
 import ClassPropertyDeclarationNode from "./declarations/ClassPropertyDeclarationNode.ts";
@@ -52,7 +53,8 @@ export const NodeMap = {
     [NodeType.AssignmentExpression]: AssignmentExpressionNode,
     [NodeType.ClassDeclaration]: ClassDeclarationNode,
     [NodeType.ClassPropertyDeclaration]: ClassPropertyDeclarationNode,
-    [NodeType.ClassMethodDeclaration]: ClassMethodDeclarationNode
+    [NodeType.ClassMethodDeclaration]: ClassMethodDeclarationNode,
+    [NodeType.ClassConstructorDeclaration]: ClassConstructorDeclarationNode
 } as const;
 
 export type NodeMapType = {

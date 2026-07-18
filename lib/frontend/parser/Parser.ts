@@ -8,7 +8,10 @@ import type DeclarationNode from "../tree/DeclarationNode.ts";
 import { AccessModifier } from "../tree/declarations/AccessModifier.ts";
 import AccessModifierNode from "../tree/declarations/AccessModifierNode.ts";
 import AnnotationNode from "../tree/declarations/AnnotationNode.ts";
-import ClassDeclarationNode from "../tree/declarations/ClassDeclarationNode.ts";
+import ClassConstructorDeclarationNode from "../tree/declarations/ClassConstructorDeclarationNode.ts";
+import ClassDeclarationNode, {
+    type ClassMemberDeclarationNode
+} from "../tree/declarations/ClassDeclarationNode.ts";
 import { ClassKind } from "../tree/declarations/ClassKind.ts";
 import ClassKindNode from "../tree/declarations/ClassKindNode.ts";
 import { ClassMemberModifier } from "../tree/declarations/ClassMemberModifier.ts";
@@ -125,7 +128,8 @@ class Parser {
         NodeType.EmptyStatement,
         NodeType.FunctionDeclaration,
         NodeType.ClassDeclaration,
-        NodeType.ClassMethodDeclaration
+        NodeType.ClassMethodDeclaration,
+        NodeType.ClassConstructorDeclaration
     ];
 
     protected readonly spaceshipOperatorMap = {
@@ -1045,18 +1049,7 @@ class Parser {
             : null;
     }
 
-    protected parseFunctionDeclaration(
-        context: ParserContext,
-        annotations: AnnotationNode[]
-    ): FunctionDeclarationNode {
-        const accessModifier = this.parseDeclarationAccessModifier(context);
-        const functionModifiers =
-            this.parseFunctionDeclarationModifiers(context);
-
-        context.assertStackEmpty();
-
-        const token = context.expect([TokenType.Function]);
-        const identifier = this.parseIdentifier(context);
+    protected parseFunctionParameterList(context: ParserContext) {
         const parameters: FunctionParameterDeclarationNode[] = [];
 
         context.expect([TokenType.ParenthesisOpen]);
@@ -1104,13 +1097,35 @@ class Parser {
         }
 
         context.expect([TokenType.ParenthesisClose]);
+        return parameters;
+    }
 
+    protected parseFunctionReturnTypeAnnotation(context: ParserContext) {
         let returnType: TypeExpressionNode | undefined;
 
         if (context.peek()?.type === TokenType.Colon) {
             context.consume();
             returnType = this.parseTypeExpression(context);
         }
+
+        return returnType;
+    }
+
+    protected parseFunctionDeclaration(
+        context: ParserContext,
+        annotations: AnnotationNode[]
+    ): FunctionDeclarationNode {
+        const accessModifier = this.parseDeclarationAccessModifier(context);
+        const functionModifiers =
+            this.parseFunctionDeclarationModifiers(context);
+
+        context.assertStackEmpty();
+
+        const token = context.expect([TokenType.Function]);
+        const identifier = this.parseIdentifier(context);
+        const parameters: FunctionParameterDeclarationNode[] =
+            this.parseFunctionParameterList(context);
+        const returnType = this.parseFunctionReturnTypeAnnotation(context);
 
         const body = this.parseBlockStatement(context);
         const copyAnnotations = [...annotations];
@@ -1158,6 +1173,39 @@ class Parser {
         );
     }
 
+    protected parseClassConstructorDeclaration(
+        context: ParserContext,
+        annotations: AnnotationNode[]
+    ): ClassConstructorDeclarationNode {
+        const accessModifier = this.parseDeclarationAccessModifier(context);
+
+        context.assertStackEmpty();
+
+        const token = context.expect([TokenType.Constructor]);
+        const parameters: FunctionParameterDeclarationNode[] =
+            this.parseFunctionParameterList(context);
+        const returnType = this.parseFunctionReturnTypeAnnotation(context);
+
+        if (returnType) {
+            this.diagnostic({
+                code: DiagnosticCode.IllegalReturnTypeAnnotation,
+                level: DiagnosticLevel.Error,
+                location: returnType.location,
+                message: "Return type annotation is not allowed here"
+            });
+        }
+
+        const body = this.parseBlockStatement(context);
+
+        return new ClassConstructorDeclarationNode(
+            parameters,
+            accessModifier,
+            annotations,
+            body,
+            this.combineLocations(accessModifier, token, ...parameters, body)
+        );
+    }
+
     protected parseClassMethodDeclaration(
         context: ParserContext,
         annotations: AnnotationNode[]
@@ -1196,8 +1244,9 @@ class Parser {
 
     protected parseClassMemberDeclaration(
         context: ParserContext
-    ): ClassMethodDeclarationNode | ClassPropertyDeclarationNode {
-        let node: ClassMethodDeclarationNode | ClassPropertyDeclarationNode;
+    ): ClassMemberDeclarationNode {
+        let node: ClassMemberDeclarationNode;
+
         const annotations = this.parseAnnotations(context);
 
         this.bufferModifiers(context);
@@ -1211,6 +1260,13 @@ class Parser {
 
             case TokenType.Function:
                 node = this.parseClassMethodDeclaration(context, annotations);
+                break;
+
+            case TokenType.Constructor:
+                node = this.parseClassConstructorDeclaration(
+                    context,
+                    annotations
+                );
                 break;
 
             default:
@@ -1246,6 +1302,7 @@ class Parser {
         const identifier = this.parseIdentifier(context);
         const properties = new Map<string, ClassPropertyDeclarationNode>();
         const methods = new Map<string, ClassMethodDeclarationNode>();
+        const constructors: ClassConstructorDeclarationNode[] = [];
 
         context.expect([TokenType.BraceOpen]);
 
@@ -1257,6 +1314,8 @@ class Parser {
 
             if (member instanceof ClassMethodDeclarationNode) {
                 methods.set(member.identifier.symbol, member);
+            } else if (member instanceof ClassConstructorDeclarationNode) {
+                constructors.push(member);
             } else if (member instanceof ClassPropertyDeclarationNode) {
                 properties.set(member.identifier.symbol, member);
             } else {
@@ -1283,6 +1342,7 @@ class Parser {
             identifier,
             properties,
             methods,
+            constructors,
             copyAnnotations,
             this.combineLocations(
                 kindToken,

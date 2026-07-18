@@ -204,7 +204,7 @@ class DiagnosticPrinter {
                 match => `${chalk.whiteBright(this.stripANSI(`${match}`))}`
             )
             .replaceAll(
-                /let|final|const|function|class|type|public|private|protected|override|extends|implements|uses|import|static|operator/g,
+                /new|function|class|trait|interface|abstract|type|public|private|protected|override|constructor|let|final|const|extends|implements|uses|import|static|operator|infix|type/g,
                 match => `${chalk.blueBright.bold(this.stripANSI(match))}`
             )
             .replaceAll(

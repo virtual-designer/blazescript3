@@ -82,7 +82,8 @@ class Tokenizer {
         out: TokenType.Out,
         new: TokenType.New,
         package: TokenType.Package,
-        static: TokenType.Static
+        static: TokenType.Static,
+        constructor: TokenType.Constructor
     } as const;
 
     private readonly zeroCharCode = "0".charCodeAt(0);

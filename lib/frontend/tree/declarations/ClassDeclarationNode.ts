@@ -4,6 +4,7 @@ import type { Location } from "../Location.ts";
 import NodeType from "../NodeType.ts";
 import type AccessModifierNode from "./AccessModifierNode.ts";
 import type AnnotationNode from "./AnnotationNode.ts";
+import type ClassConstructorDeclarationNode from "./ClassConstructorDeclarationNode.ts";
 import type ClassKindNode from "./ClassKindNode.ts";
 import type ClassMethodDeclarationNode from "./ClassMethodDeclarationNode.ts";
 import type { ClassModifier } from "./ClassModifier.ts";
@@ -18,6 +19,7 @@ class ClassDeclarationNode extends DeclarationNode {
     public readonly identifier: IdentifierNode;
     public readonly properties: Map<string, ClassPropertyDeclarationNode>;
     public readonly methods: Map<string, ClassMethodDeclarationNode>;
+    public readonly constructors: ClassConstructorDeclarationNode[];
     public readonly annotations: AnnotationNode[];
 
     public constructor(
@@ -27,6 +29,7 @@ class ClassDeclarationNode extends DeclarationNode {
         identifier: IdentifierNode,
         properties: Map<string, ClassPropertyDeclarationNode>,
         methods: Map<string, ClassMethodDeclarationNode>,
+        constructors: ClassConstructorDeclarationNode[],
         annotations: AnnotationNode[],
         location: Location
     ) {
@@ -37,6 +40,7 @@ class ClassDeclarationNode extends DeclarationNode {
         this.identifier = identifier;
         this.properties = properties;
         this.methods = methods;
+        this.constructors = constructors;
         this.annotations = annotations;
     }
 
@@ -49,9 +53,15 @@ class ClassDeclarationNode extends DeclarationNode {
             this.identifier,
             ...this.properties.values(),
             ...this.methods.values(),
+            ...this.constructors,
             ...this.annotations
         ];
     }
 }
+
+export type ClassMemberDeclarationNode =
+    | ClassConstructorDeclarationNode
+    | ClassPropertyDeclarationNode
+    | ClassMethodDeclarationNode;
 
 export default ClassDeclarationNode;
