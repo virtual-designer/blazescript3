@@ -28,19 +28,22 @@ class Tokenizer {
         "@": TokenType.At
     } as const;
 
-    public static readonly MULTI_CHAR_TOKENS = {
-        "<=>": TokenType.Spaceship,
-        "==": TokenType.EqualEqual,
-        "!=": TokenType.NotEqual,
-        ">=": TokenType.GreaterThanEqual,
-        "<=": TokenType.LessThanEqual,
-        "=>": TokenType.FatArrow,
-        "++": TokenType.PlusPlus,
-        "--": TokenType.MinusMinus,
-        "..": TokenType.DotDot
-    } as const;
+    public static readonly MULTI_CHAR_TOKENS = Object.assign(
+        Object.create(null),
+        {
+            "<=>": TokenType.Spaceship,
+            "==": TokenType.EqualEqual,
+            "!=": TokenType.NotEqual,
+            ">=": TokenType.GreaterThanEqual,
+            "<=": TokenType.LessThanEqual,
+            "=>": TokenType.FatArrow,
+            "++": TokenType.PlusPlus,
+            "--": TokenType.MinusMinus,
+            "..": TokenType.DotDot
+        } as const
+    );
 
-    public static readonly KEYWORDS = {
+    public static readonly KEYWORDS = Object.assign(Object.create(null), {
         let: TokenType.Let,
         const: TokenType.Const,
         final: TokenType.Final,
@@ -84,7 +87,7 @@ class Tokenizer {
         package: TokenType.Package,
         static: TokenType.Static,
         constructor: TokenType.Constructor
-    } as const;
+    } as const);
 
     private readonly zeroCharCode = "0".charCodeAt(0);
     private readonly oneCharCode = "1".charCodeAt(0);

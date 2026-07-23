@@ -47,6 +47,7 @@ class Compiler {
                 rootNodes.push(rootNode);
             } catch (error) {
                 if (isLocatableError(error)) {
+                    console.log(error);
                     this.diagnosticPrinter.print(
                         error instanceof ParserError && error.diagnostic
                             ? error.diagnostic
