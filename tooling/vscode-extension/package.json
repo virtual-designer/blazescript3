@@ -4,7 +4,7 @@
     "description": "Language support extension for The BlazeScript Programming Language",
     "version": "0.0.2",
     "engines": {
-        "vscode": "^1.120.0"
+        "vscode": "^1.102.0"
     },
     "author": {
         "name": "Ar Rakin",
