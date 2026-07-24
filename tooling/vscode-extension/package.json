@@ -2,7 +2,7 @@
     "name": "blazescript",
     "displayName": "Language Support for BlazeScript",
     "description": "Language support extension for The BlazeScript Programming Language",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "engines": {
         "vscode": "^1.102.0"
     },
