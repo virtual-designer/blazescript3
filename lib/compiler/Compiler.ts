@@ -18,7 +18,6 @@ class Compiler {
     protected readonly parser = new Parser();
     protected readonly transformer = new NodeTransformer();
     protected readonly generator = new CodeGenerator();
-    protected readonly analyzer = new SemanticAnalyzer();
     protected readonly diagnosticPrinter = new DiagnosticPrinter();
 
     public async accept(tx: CompilerTransaction): Promise<string | undefined> {
@@ -47,7 +46,6 @@ class Compiler {
                 rootNodes.push(rootNode);
             } catch (error) {
                 if (isLocatableError(error)) {
-                    console.log(error);
                     this.diagnosticPrinter.print(
                         error instanceof ParserError && error.diagnostic
                             ? error.diagnostic
@@ -66,7 +64,10 @@ class Compiler {
             }
         }
 
-        if (this.diagnosticPrinter.hasErrors()) {
+        if (
+            this.diagnosticPrinter.hasErrors() &&
+            process.env.BLAZEC_EMIT_ON_ERROR != "1"
+        ) {
             return void this.end();
         }
 
@@ -79,14 +80,20 @@ class Compiler {
         const compiledJSNodes = [];
 
         for (const rootNode of rootNodes) {
-            const diagnostics = this.analyzer.analyze(rootNode);
+            const analyzer = new SemanticAnalyzer(rootNode);
+            analyzer.analyze();
+
+            const diagnostics = analyzer.getDiagnostics();
 
             if (diagnostics.length) {
                 this.diagnosticPrinter.print(...diagnostics);
             }
         }
 
-        if (this.diagnosticPrinter.hasErrors()) {
+        if (
+            this.diagnosticPrinter.hasErrors() &&
+            process.env.BLAZEC_EMIT_ON_ERROR != "1"
+        ) {
             return void this.end();
         }
 
@@ -121,7 +128,10 @@ class Compiler {
 
         this.end();
 
-        if (this.diagnosticPrinter.hasErrors()) {
+        if (
+            this.diagnosticPrinter.hasErrors() &&
+            process.env.BLAZEC_EMIT_ON_ERROR != "1"
+        ) {
             return undefined;
         }
 

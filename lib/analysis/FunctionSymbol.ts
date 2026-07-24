@@ -3,7 +3,7 @@ import type FunctionDeclarationNode from "../frontend/tree/declarations/Function
 import type IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
 import { SymbolDefinition } from "./SymbolDefinition.ts";
 
-export class FunctionDeclarationSymbolDefinition extends SymbolDefinition {
+export class FunctionSymbol extends SymbolDefinition {
     public override readonly node: FunctionDeclarationNode;
 
     public constructor(node: FunctionDeclarationNode, hits: number = 0) {

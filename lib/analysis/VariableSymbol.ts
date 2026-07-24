@@ -3,7 +3,7 @@ import type VariableDeclarationNode from "../frontend/tree/declarations/Variable
 import type IdentifierNode from "../frontend/tree/expressions/IdentifierNode.ts";
 import { SymbolDefinition } from "./SymbolDefinition.ts";
 
-export class VariableDeclarationSymbolDefinition extends SymbolDefinition {
+export class VariableSymbol extends SymbolDefinition {
     public readonly isInitialized: boolean;
     private _isAssigned: boolean;
     public override readonly node: VariableDeclarationNode;

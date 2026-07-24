@@ -16,3 +16,7 @@ export type TreeWalker<B extends AbstractNode> = {
     _init?(node: B): TreeWalker<AbstractNode> | void | undefined;
     _cleanup?(node: B): void;
 };
+
+export type NodeName<T extends NodeType> = {
+    [K in keyof typeof NodeType]: (typeof NodeType)[K] extends T ? K : never;
+}[keyof typeof NodeType];
