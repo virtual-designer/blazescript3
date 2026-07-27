@@ -1300,8 +1300,8 @@ class Parser {
 
         const classToken = context.expect([TokenType.Class]);
         const identifier = this.parseIdentifier(context);
-        const properties = new Map<string, ClassPropertyDeclarationNode>();
-        const methods = new Map<string, ClassMethodDeclarationNode>();
+        const properties: ClassPropertyDeclarationNode[] = [];
+        const methods: ClassMethodDeclarationNode[] = [];
         const constructors: ClassConstructorDeclarationNode[] = [];
 
         context.expect([TokenType.BraceOpen]);
@@ -1313,11 +1313,11 @@ class Parser {
             const member = this.parseClassMemberDeclaration(context);
 
             if (member instanceof ClassMethodDeclarationNode) {
-                methods.set(member.identifier.symbol, member);
+                methods.push(member);
             } else if (member instanceof ClassConstructorDeclarationNode) {
                 constructors.push(member);
             } else if (member instanceof ClassPropertyDeclarationNode) {
-                properties.set(member.identifier.symbol, member);
+                properties.push(member);
             } else {
                 // @ts-ignore
                 let _x: never = member;

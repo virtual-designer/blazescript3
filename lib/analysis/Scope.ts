@@ -4,11 +4,13 @@ export class Scope {
     public readonly symbolTable: Map<string, SymbolDefinition>;
     public readonly parent: Scope | null;
     public readonly children: Set<Scope>;
+    public readonly synthetic: boolean;
 
     public constructor(
         parent: Scope | null,
         symbolTable: Map<string, SymbolDefinition> = new Map(),
-        children: Set<Scope> = new Set()
+        children: Set<Scope> = new Set(),
+        synthetic = false
     ) {
         this.parent = parent;
 
@@ -18,6 +20,7 @@ export class Scope {
 
         this.symbolTable = symbolTable;
         this.children = children;
+        this.synthetic = synthetic;
     }
 
     public traverse(callback: (scope: Scope) => void) {

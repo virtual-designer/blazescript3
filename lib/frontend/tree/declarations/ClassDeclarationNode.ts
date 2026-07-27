@@ -1,3 +1,4 @@
+import type { Scope } from "../../../analysis/Scope.ts";
 import DeclarationNode from "../DeclarationNode.ts";
 import type IdentifierNode from "../expressions/IdentifierNode.ts";
 import type { Location } from "../Location.ts";
@@ -17,18 +18,19 @@ class ClassDeclarationNode extends DeclarationNode {
     public readonly accessModifier: AccessModifierNode | null;
     public readonly modifiers: ModifierListNode<ClassModifier> | null;
     public readonly identifier: IdentifierNode;
-    public readonly properties: Map<string, ClassPropertyDeclarationNode>;
-    public readonly methods: Map<string, ClassMethodDeclarationNode>;
+    public readonly properties: ClassPropertyDeclarationNode[];
+    public readonly methods: ClassMethodDeclarationNode[];
     public readonly constructors: ClassConstructorDeclarationNode[];
     public readonly annotations: AnnotationNode[];
+    private scope: Scope | null = null;
 
     public constructor(
         kind: ClassKindNode,
         accessModifier: AccessModifierNode | null,
         modifiers: ModifierListNode<ClassModifier> | null,
         identifier: IdentifierNode,
-        properties: Map<string, ClassPropertyDeclarationNode>,
-        methods: Map<string, ClassMethodDeclarationNode>,
+        properties: ClassPropertyDeclarationNode[],
+        methods: ClassMethodDeclarationNode[],
         constructors: ClassConstructorDeclarationNode[],
         annotations: AnnotationNode[],
         location: Location
@@ -44,6 +46,14 @@ class ClassDeclarationNode extends DeclarationNode {
         this.annotations = annotations;
     }
 
+    public getScope() {
+        return this.scope;
+    }
+
+    public setScope(scope: Scope) {
+        this.scope = scope;
+    }
+
     public override branches() {
         return [
             ...super.branches(),
@@ -51,8 +61,8 @@ class ClassDeclarationNode extends DeclarationNode {
             this.accessModifier,
             this.modifiers,
             this.identifier,
-            ...this.properties.values(),
-            ...this.methods.values(),
+            ...this.properties,
+            ...this.methods,
             ...this.constructors,
             ...this.annotations
         ];

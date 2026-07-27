@@ -5,6 +5,7 @@ import { DiagnosticCode } from "../diagnostic/DiagnosticCode.ts";
 import { DiagnosticLevel } from "../diagnostic/DiagnosticLevel.ts";
 import type AbstractNode from "../frontend/tree/AbstractNode.ts";
 import { AccessModifier } from "../frontend/tree/declarations/AccessModifier.ts";
+import type ClassDeclarationNode from "../frontend/tree/declarations/ClassDeclarationNode.ts";
 import type ClassMethodDeclarationNode from "../frontend/tree/declarations/ClassMethodDeclarationNode.ts";
 import type FunctionDeclarationNode from "../frontend/tree/declarations/FunctionDeclarationNode.ts";
 import VariableDeclarationKind from "../frontend/tree/declarations/VariableDeclarationKind.ts";
@@ -20,11 +21,12 @@ import type ReturnStatementNode from "../frontend/tree/statements/ReturnStatemen
 import type { TreeVisitor } from "../frontend/tree/TreeVisitor.ts";
 import { TreeVisitorInvoker } from "../frontend/tree/TreeVisitorInvoker.ts";
 import TypeUtils from "../types/TypeUtils.ts";
+import { ClassSymbol } from "./ClassSymbol.ts";
 import { FunctionSymbol } from "./FunctionSymbol.ts";
 import { Scope } from "./Scope.ts";
 import { VariableSymbol } from "./VariableSymbol.ts";
 
-type SemanticAnalyzerContext = {
+export type SemanticAnalyzerContext = {
     scope: Scope;
     functionScopeDepth: number;
 };
@@ -57,7 +59,7 @@ class SemanticAnalyzer implements TreeVisitor<SemanticAnalyzerContext> {
             const symbol = scope.symbolTable.get(identifier.symbol)!;
 
             this.addDiagnostic({
-                message: `Identifier '${identifier.symbol}' is already defined`,
+                message: `'${identifier.symbol}' is already defined`,
                 code: DiagnosticCode.IllegalRedefinition,
                 level: DiagnosticLevel.Error,
                 location: identifier.location,
@@ -215,8 +217,12 @@ class SemanticAnalyzer implements TreeVisitor<SemanticAnalyzerContext> {
             });
         }
 
-        const defn = new VariableSymbol(node, false, node.inline ? 1 : -1);
-        context.scope.symbolTable.set(node.identifier.symbol, defn);
+        const definition = new VariableSymbol(
+            node,
+            false,
+            node.inline ? 1 : -1
+        );
+        context.scope.symbolTable.set(node.identifier.symbol, definition);
     }
 
     public visitIdentifier(
@@ -361,8 +367,8 @@ class SemanticAnalyzer implements TreeVisitor<SemanticAnalyzerContext> {
             });
         }
 
-        const defn = new FunctionSymbol(node, -1);
-        context.scope.symbolTable.set(node.identifier.symbol, defn);
+        const definition = new FunctionSymbol(node, -1);
+        context.scope.symbolTable.set(node.identifier.symbol, definition);
 
         return {
             cleanup: () => {
@@ -396,6 +402,75 @@ class SemanticAnalyzer implements TreeVisitor<SemanticAnalyzerContext> {
                 location: node.location
             });
         }
+    }
+
+    public visitClassDeclaration(
+        node: ClassDeclarationNode,
+        context: SemanticAnalyzerContext
+    ) {
+        if (
+            !this.checkIdentifierExistingDefinition(
+                node.identifier,
+                node,
+                context
+            )
+        ) {
+            return;
+        }
+
+        let scope = node.getScope();
+
+        if (!scope) {
+            const childScope = new Scope(
+                context.scope,
+                undefined,
+                undefined,
+                true
+            );
+            scope = childScope;
+            node.setScope(childScope);
+        }
+
+        const classSymbol = new ClassSymbol(node, -1);
+
+        classSymbol.buildSymbolTable(scope, node => {
+            return this.checkIdentifierExistingDefinition(
+                node.identifier,
+                node,
+                {
+                    ...context,
+                    scope
+                }
+            );
+        });
+
+        context.scope.symbolTable.set(
+            classSymbol.getIdentifier().symbol,
+            classSymbol
+        );
+
+        if (
+            node.accessModifier &&
+            node.accessModifier.value !== AccessModifier.Private
+        ) {
+            classSymbol.incrementHit();
+
+            for (const [_, symbol] of classSymbol.symbolTable) {
+                symbol.incrementHit();
+            }
+        }
+
+        context.scope = scope;
+
+        return {
+            cleanup: () => {
+                assert(context.scope === scope);
+
+                if (context.scope.parent) {
+                    context.scope = context.scope.parent;
+                }
+            }
+        };
     }
 }
 
